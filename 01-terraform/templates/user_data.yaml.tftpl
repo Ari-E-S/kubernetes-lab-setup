@@ -1,0 +1,58 @@
+---
+#cloud-config
+# vim:syntax=yaml
+package_update: true
+package_upgrade: true
+
+users:
+  - name: ubuntu
+    groups: users,adm,dialout,audio,netdev,video,plugdev,cdrom,games,input,gpio,spi,i2c,render,sudo
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${public_key_ubuntu}
+
+
+ssh_deletekeys: false
+packages:
+  - python-is-python3
+  - gnupg
+  - tzdata
+  - net-tools
+  - linux-virtual
+  - linux-cloud-tools-virtual
+  - linux-tools-virtual
+  - curl
+  - apt-transport-https
+  - ca-certificates
+  - tmux
+  - vim
+  - wget
+  - nmon
+  - lsb-release
+
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+    content: |
+      # Enabling password authentication
+      PasswordAuthentication yes
+
+  - path: /etc/initramfs-tools/modules
+    content: |
+      # List of modules that you want to include in your initramfs.
+      # They will be loaded at boot time in the order below.
+      #
+      # Syntax:  module_name [args ...]
+      #
+      # You must run update-initramfs(8) to effect this change.
+      #
+      hv_vmbus
+      hv_storvsc
+      hv_blkvsc
+      hv_netvsc
+
+runcmd:
+  - systemctl restart sshd
+  - modprobe br_netfilter # Load br_netfilter module.
+  - update-initramfs -u
