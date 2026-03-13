@@ -1,0 +1,123 @@
+---
+
+- hosts: all
+  handlers:
+    - name: Restart Server
+      ansible.builtin.reboot:
+        msg: "Rebooting for package update"
+    - name: clean apt
+      ansible.builtin.apt:
+        clean: true
+      become: true
+      become_method: sudo
+      ignore_errors: true
+  roles:
+    - "10-configure-base"
+  tasks:
+    - name: Create KubeConfig directory
+      ansible.builtin.file:
+        path: /home/ubuntu/.kube
+        state: directory
+
+- name: Get the name of the primary control plane
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Print the primary control plane's name
+      ansible.builtin.debug:
+        msg: "The primary control plane node is: {{ groups['controlplane'][0] }}"
+      run_once: true
+
+- hosts: controlplane[0]
+  tasks:
+    - block:
+      - name: initialize kubernetes with the necessary args
+        ansible.builtin.shell:
+          cmd: "kubeadm init --control-plane-endpoint {{ groups['controlplane'][0] }} --upload-certs --pod-network-cidr 10.0.16.0/20 --service-cidr 10.0.15.0/24"
+          creates: /etc/kubernetes/admin.conf
+        become: true
+        register: k8s_init_output
+
+      - name: copy kube config into ubuntu's home dir subfolder
+        ansible.builtin.copy:
+          remote_src: yes
+          src: /etc/kubernetes/admin.conf
+          dest: /home/ubuntu/.kube/config
+          owner: ubuntu
+          group: ubuntu
+          mode: '600'
+        become: true
+
+      - name: generate join command
+        ansible.builtin.shell: "kubeadm token create --print-join-command"
+        register: join_command_output
+        become: true
+
+      - name: generate certificate key for use with join_command later
+        ansible.builtin.shell: "kubeadm init phase upload-certs --upload-certs"
+        register: certificate_key_output
+        become: true
+
+- hosts: all
+  tasks:
+    - name: save join command for other hosts to access them
+      ansible.builtin.set_fact:
+        join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
+        certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
+
+- hosts: controlplane[1:]
+  serial: 1
+  tasks:
+    - name: setup other control plane nodes
+      ansible.builtin.shell:
+        cmd: "{{ join_command }} --control-plane --certificate-key {{ certificate_key }}"
+        creates: /etc/kubernetes/admin.conf
+      become: true
+
+    - name: copy kube config into ubuntu's home dir subfolder
+      ansible.builtin.copy:
+        remote_src: yes
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        owner: ubuntu
+        group: ubuntu
+        mode: '600'
+      become: true
+
+- hosts: workers
+  serial: 1
+  tasks:
+    - name: setup worker nodes
+      ansible.builtin.shell: "{{ join_command }}"
+      become: true
+
+# - hosts: controlplane
+#   tasks:
+#     - name: Print all nodes
+#       ansible.builtin.shell: "kubectl get nodes"
+#       register: cluster_output
+
+#     - name: print cluster_output
+#       ansible.builtin.debug:
+#         var: cluster_output
+
+# - hosts: controlplane
+#   roles:
+#     - "20-configure-addons"
+
+#   tasks:
+#     - name: copy over grafana file
+#       ansible.builtin.copy:
+#         src: ../20-monitoring/10-grafana.yaml
+#         dest: 10-grafana.yaml
+
+#     - name: apply grafana
+#       ansible.builtin.shell: "kubectl apply -f 10-grafana.yaml"
+
+#     - name: copy over prometheus file
+#       ansible.builtin.copy:
+#         src: ../20-monitoring/20-prometheus.yaml
+#         dest: 20-prometheus.yaml
+
+#     - name: apply file
+#       ansible.builtin.shell: "kubectl apply -f 20-prometheus.yaml"

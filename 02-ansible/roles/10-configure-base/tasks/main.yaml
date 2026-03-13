@@ -1,0 +1,147 @@
+---
+# tasks file for setup-node
+# This will install packages and apply various system configs necessary for Kubernetes nodes.
+
+- name: Enable ip forwarding in /proc and in the sysctl file and reload if necessary
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  become: true
+  become_method: sudo
+
+# Let iptables see bridged traffic
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#letting-iptables-see-bridged-traffic
+- name: Enable netfilter bridging in /proc and in the sysctl file and reload if necessary
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  with_items:
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+  become: true
+  become_method: sudo
+
+- name: load kernel modules
+  ansible.builtin.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  with_items:
+    - overlay
+    - br_netfilter
+  become: true
+  become_method: sudo
+  notify: Restart Server
+
+- name: Disable swap in /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "swap.img"
+    state: absent
+    backup: yes
+  become: true
+  become_method: sudo
+
+- name: add kubernetes repo key
+  ansible.builtin.get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
+    dest: /etc/apt/keyrings/kubernetes-apt.asc
+    mode: "0644"
+  become: true
+  become_method: sudo
+  notify: clean apt
+
+- name: add kubernetes repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+    state: present
+    update_cache: yes
+  become: true
+  become_method: sudo
+  notify: clean apt
+
+- name: update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
+  become: true
+  become_method: sudo
+
+- name: Install a list of packages
+  ansible.builtin.apt:
+    pkg:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gpg
+    - tree
+    - containernetworking-plugins
+    - ipset
+    - ipvsadm
+    - kubelet
+    - kubeadm
+    - kubectl
+    - containerd
+    - python-is-python3
+  become: true
+  become_method: sudo
+
+# I ran into an issue where Ansible was working too quickly for
+# ansible.builtin.dpkg_selections so let's take a 5-second nap
+- name: wait 5 seconds
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Hold kubernetes packages at their current version
+  ansible.builtin.dpkg_selections:
+    name:  "{{ item }}"
+    selection: hold
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+  become: true
+  become_method: sudo
+  ignore_errors: true
+
+- name: trigger handlers to clean apt and reboot
+  ansible.builtin.meta: flush_handlers
+
+- name: enable kubelet via systemctl
+  ansible.builtin.systemd_service:
+    name: kubelet
+    enabled: true
+  become: true
+  become_method: sudo
+
+# these two calls setup the default containerd config file
+# credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
+- name: mkdir /etc/containerd
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+  become: true
+
+- name: save default containerd config to /etc/containerd/config.toml
+  ansible.builtin.shell:
+    cmd: "containerd config default | tee /etc/containerd/config.toml"
+    creates: /etc/containerd/config.toml
+  register: containerd_config
+  become: true
+
+# set CRI to use SystemdCgroup, which is false by default
+# settings take effect after restart, which is handled later
+# https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
+- name: edit SystemdCgroup to be true in /etc/containerd/config.toml
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+  when: containerd_config.changed == True
+  become: true
