@@ -2,15 +2,17 @@
 
 - hosts: all
   handlers:
-    - name: Restart Server
-      ansible.builtin.reboot:
-        msg: "Rebooting for package update"
     - name: clean apt
       ansible.builtin.apt:
         clean: true
       become: true
       become_method: sudo
       ignore_errors: true
+    - name: Restart Server
+      ansible.builtin.reboot:
+        msg: "Rebooting for package update"
+      become: true
+      become_method: sudo
   roles:
     - "10-configure-base"
   tasks:
