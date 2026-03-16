@@ -72,7 +72,7 @@
   tasks:
     - name: setup other control plane nodes
       ansible.builtin.shell:
-        cmd: "{{ join_command }} --control-plane --certificate-key {{ certificate_key }}"
+        cmd: "{{ join_command }} --certificate-key {{ certificate_key }} --control-plane"
         creates: /etc/kubernetes/admin.conf
       become: true
 
@@ -89,8 +89,9 @@
 - hosts: workers
   serial: 1
   tasks:
-    - name: setup worker nodes
-      ansible.builtin.shell: "{{ join_command }}"
+    - name: join worker nodes to the cluster
+      ansible.builtin.shell:
+        cmd: "{{ join_command }} --certificate-key {{ certificate_key }}"
       become: true
 
 # - hosts: controlplane
