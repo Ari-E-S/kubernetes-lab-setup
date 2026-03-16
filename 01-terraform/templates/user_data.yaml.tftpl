@@ -19,9 +19,6 @@ packages:
   - gnupg
   - tzdata
   - net-tools
-  - linux-virtual
-  - linux-cloud-tools-virtual
-  - linux-tools-virtual
   - curl
   - apt-transport-https
   - ca-certificates
@@ -30,7 +27,12 @@ packages:
   - wget
   - nmon
   - lsb-release
-
+%{~ if platform=="hyperv" }
+  # Hyper-V specific
+  - linux-virtual
+  - linux-cloud-tools-virtual
+  - linux-tools-virtual
+%{~ endif }
 
 write_files:
   - path: /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
@@ -38,6 +40,8 @@ write_files:
       # Enabling password authentication
       PasswordAuthentication yes
 
+%{~ if platform=="hyperv" }
+  # Hyper-V specific
   - path: /etc/initramfs-tools/modules
     content: |
       # List of modules that you want to include in your initramfs.
@@ -52,6 +56,7 @@ write_files:
       hv_blkvsc
       hv_netvsc
 
+%{~ endif }
 runcmd:
   - systemctl restart sshd
   - modprobe br_netfilter # Load br_netfilter module.
