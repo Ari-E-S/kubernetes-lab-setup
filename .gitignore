@@ -95,3 +95,14 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,windows,macos,visualstudiocode
+
+# Custom ignores for this project
+*.wip
+*.back
+*.backup
+*.bak
+*.tmp
+*.swp
+*.log
+*.out
+*.err
