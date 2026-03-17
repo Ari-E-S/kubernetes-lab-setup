@@ -14,10 +14,10 @@ module "k8s_controllers" {
   source = "./modules/multipass"
 
   cloud_init     = local.cloud_init
-  instance_count = 1
+  instance_count = var.controller_count
   image_name     = local.image_name
   name_prefix    = local.name_prefix
-  name           = "controller"
+  name           = "control"
   cpus           = 2
   memory         = "2G"
   disks          = "10G"
@@ -27,7 +27,7 @@ module "k8s_workers" {
   source = "./modules/multipass"
 
   cloud_init     = local.cloud_init
-  instance_count = 1
+  instance_count = var.worker_count
   image_name     = local.image_name
   name_prefix    = local.name_prefix
   name           = "worker"
