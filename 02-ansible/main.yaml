@@ -3,11 +3,6 @@
 - hosts: all
   roles:
     - "10-configure-base"
-  tasks:
-    - name: Create KubeConfig directory
-      ansible.builtin.file:
-        path: /home/ubuntu/.kube
-        state: directory
 
 - name: Get the name of the primary control plane
   hosts: all

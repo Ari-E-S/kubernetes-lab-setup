@@ -145,3 +145,8 @@
     replace: 'SystemdCgroup = true'
   when: containerd_config.changed == True
   become: true
+
+- name: Create KubeConfig directory
+  ansible.builtin.file:
+    path: /home/ubuntu/.kube
+    state: directory
