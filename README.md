@@ -34,7 +34,7 @@ Get-NetIPInterface | `
 
 The following modules need to be installed from Ansible Galaxy:
 * ansible.posix
-* ansible.builtin.modprobe
+* community.general
 * kubernetes.core
 
 The way to install these modules is

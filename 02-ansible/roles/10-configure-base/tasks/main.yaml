@@ -2,6 +2,18 @@
 # tasks file for setup-node
 # This will install packages and apply various system configs necessary for Kubernetes nodes.
 
+- name: load kernel modules
+  ansible.builtin.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  with_items:
+    - overlay
+    - br_netfilter
+  become: true
+  become_method: sudo
+  notify: Restart Server
+
 - name: Enable ip forwarding in /proc and in the sysctl file and reload if necessary
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
@@ -26,18 +38,6 @@
     - net.bridge.bridge-nf-call-ip6tables
   become: true
   become_method: sudo
-
-- name: load kernel modules
-  ansible.builtin.modprobe:
-    name: "{{ item }}"
-    state: present
-    persistent: present
-  with_items:
-    - overlay
-    - br_netfilter
-  become: true
-  become_method: sudo
-  notify: Restart Server
 
 - name: Disable swap in /etc/fstab
   ansible.builtin.lineinfile:
