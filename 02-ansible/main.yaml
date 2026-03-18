@@ -75,6 +75,7 @@
     - name: join worker nodes to the cluster
       ansible.builtin.shell:
         cmd: "{{ join_command }} --certificate-key {{ certificate_key }}"
+        creates: /etc/kubernetes/pki/ca.crt
       become: true
 
 # - hosts: controlplane
