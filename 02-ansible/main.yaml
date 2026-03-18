@@ -1,25 +1,8 @@
 ---
 
 - hosts: all
-  handlers:
-    - name: clean apt
-      ansible.builtin.apt:
-        clean: true
-      become: true
-      become_method: sudo
-      ignore_errors: true
-    - name: Restart Server
-      ansible.builtin.reboot:
-        msg: "Rebooting for package update"
-      become: true
-      become_method: sudo
   roles:
     - "10-configure-base"
-  tasks:
-    - name: Create KubeConfig directory
-      ansible.builtin.file:
-        path: /home/ubuntu/.kube
-        state: directory
 
 - name: Get the name of the primary control plane
   hosts: all
@@ -92,6 +75,7 @@
     - name: join worker nodes to the cluster
       ansible.builtin.shell:
         cmd: "{{ join_command }} --certificate-key {{ certificate_key }}"
+        creates: /etc/kubernetes/pki/ca.crt
       become: true
 
 # - hosts: controlplane

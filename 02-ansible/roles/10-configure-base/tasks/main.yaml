@@ -48,23 +48,42 @@
   become: true
   become_method: sudo
 
-- name: add kubernetes repo key
-  ansible.builtin.get_url:
-    url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
-    dest: /etc/apt/keyrings/kubernetes-apt.asc
-    mode: "0644"
-  become: true
-  become_method: sudo
-  notify: clean apt
+- block:
+  - name: add kubernetes repo key
+    ansible.builtin.get_url:
+      url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
+      dest: /etc/apt/keyrings/kubernetes-apt.asc
+      mode: "0644"
+    become: true
+    become_method: sudo
+    notify: clean apt
 
-- name: add kubernetes repository
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
-    state: present
-    update_cache: yes
-  become: true
-  become_method: sudo
-  notify: clean apt
+  - name: add kubernetes repository
+    ansible.builtin.apt_repository:
+      repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+      state: present
+      update_cache: yes
+    become: true
+    become_method: sudo
+    notify: clean apt
+
+- block:
+  - name: add helm repo key
+    ansible.builtin.apt_key:
+      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
+      state: present
+    become: true
+    become_method: sudo
+    notify: clean apt
+
+  - name: add helm repository
+    ansible.builtin.apt_repository:
+      repo: "deb https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+      state: present
+      update_cache: yes
+    become: true
+    become_method: sudo
+    notify: clean apt
 
 - name: update apt cache
   ansible.builtin.apt:
@@ -89,6 +108,7 @@
     - kubectl
     - containerd
     - python-is-python3
+    - helm
   become: true
   become_method: sudo
 
@@ -120,28 +140,37 @@
   become: true
   become_method: sudo
 
-# these two calls setup the default containerd config file
-# credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
-- name: mkdir /etc/containerd
+- block:
+  # these two calls setup the default containerd config file
+  # credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
+  - name: mkdir /etc/containerd
+    ansible.builtin.file:
+      path: /etc/containerd
+      state: directory
+    become: true
+    notify: Restart Containerd
+
+  - name: save default containerd config to /etc/containerd/config.toml
+    ansible.builtin.shell:
+      cmd: "containerd config default | tee /etc/containerd/config.toml"
+      creates: /etc/containerd/config.toml
+    register: containerd_config
+    become: true
+    notify: Restart Containerd
+
+  # set CRI to use SystemdCgroup, which is false by default
+  # settings take effect after restart, which is handled later
+  # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
+  - name: edit SystemdCgroup to be true in /etc/containerd/config.toml
+    ansible.builtin.replace:
+      path: /etc/containerd/config.toml
+      regexp: 'SystemdCgroup = false'
+      replace: 'SystemdCgroup = true'
+    when: containerd_config.changed == True
+    become: true
+    notify: Restart Containerd
+
+- name: Create KubeConfig directory
   ansible.builtin.file:
-    path: /etc/containerd
+    path: /home/ubuntu/.kube
     state: directory
-  become: true
-
-- name: save default containerd config to /etc/containerd/config.toml
-  ansible.builtin.shell:
-    cmd: "containerd config default | tee /etc/containerd/config.toml"
-    creates: /etc/containerd/config.toml
-  register: containerd_config
-  become: true
-
-# set CRI to use SystemdCgroup, which is false by default
-# settings take effect after restart, which is handled later
-# https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
-- name: edit SystemdCgroup to be true in /etc/containerd/config.toml
-  ansible.builtin.replace:
-    path: /etc/containerd/config.toml
-    regexp: 'SystemdCgroup = false'
-    replace: 'SystemdCgroup = true'
-  when: containerd_config.changed == True
-  become: true
