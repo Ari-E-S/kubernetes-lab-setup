@@ -67,6 +67,24 @@
     become_method: sudo
     notify: clean apt
 
+- block:
+  - name: add helm repo key
+    ansible.builtin.apt_key:
+      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
+      state: present
+    become: true
+    become_method: sudo
+    notify: clean apt
+
+  - name: add helm repository
+    ansible.builtin.apt_repository:
+      repo: "deb https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+      state: present
+      update_cache: yes
+    become: true
+    become_method: sudo
+    notify: clean apt
+
 - name: update apt cache
   ansible.builtin.apt:
     update_cache: true
@@ -90,6 +108,7 @@
     - kubectl
     - containerd
     - python-is-python3
+    - helm
   become: true
   become_method: sudo
 
