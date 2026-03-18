@@ -1,0 +1,18 @@
+---
+- name: clean apt
+  ansible.builtin.apt:
+    clean: true
+  become: true
+  become_method: sudo
+  ignore_errors: true
+- name: Restart Server
+  ansible.builtin.reboot:
+    msg: "Rebooting for package update"
+  become: true
+  become_method: sudo
+- name: Restart Containerd
+  ansible.builtin.systemd:
+    name: containerd
+    state: restarted
+  become: true
+  become_method: sudo
