@@ -1,0 +1,5 @@
+# Executed with `ansible-galaxy collection install -r requirements.yaml`
+collections:
+  - ansible.posix
+  - community.general
+  - kubernetes.core

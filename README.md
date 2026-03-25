@@ -39,7 +39,7 @@ The following modules need to be installed from Ansible Galaxy:
 
 The way to install these modules is
 ```
-ansible-galaxy collection install <MODULE>
+ansible-galaxy collection install -r 02-ansible/requirements.yaml
 ```
 
 ## Virtualization stack
