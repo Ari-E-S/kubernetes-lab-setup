@@ -4,10 +4,10 @@ all:
     controlplane:
       hosts:
 %{~ for controller_id,controller_ip in controllers }
-        ${controller_id}.mshome.net:
+        ${controller_id}${vm_domain}:
 %{~ endfor }
     workers:
       hosts:
 %{~ for worker_id,worker_ip in workers }
-        ${worker_id}.mshome.net:
+        ${worker_id}${vm_domain}:
 %{~ endfor }
