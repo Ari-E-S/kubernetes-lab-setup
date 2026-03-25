@@ -72,7 +72,7 @@ variable "static_ip_cidr" {
 
 variable "static_ip_mask" {
   type        = number
-  default     = 20
+  default     = 24
   description = "Mask for static IP network"
 }
 
