@@ -1,3 +1,11 @@
+locals {
+  cloud_init_tpl = (
+    var.cloud_init_tpl != null ?
+    var.cloud_init_tpl :
+    "${path.module}/templates/user_data.yaml.tftpl"
+  )
+}
+
 resource "multipass_instance" "this" {
   count  = var.instance_count
   name   = join("-", [var.name_prefix, var.name, count.index + 1])
@@ -6,8 +14,30 @@ resource "multipass_instance" "this" {
   memory = var.memory
   disk   = var.disks
 
-  cloud_init_file = var.cloud_init_file
-  cloud_init      = var.cloud_init
+  cloud_init = templatefile(
+    local.cloud_init_tpl,
+    merge(
+      var.cloud_init_vars,
+      {
+        static_ip_network  = var.static_ip_network,
+        static_mac_address = local.mac_address[count.index],
+        static_ip_address = cidrhost(
+          "${var.static_ip_cidr}/${var.static_ip_mask}",
+          count.index + var.static_ip_start
+        ),
+        static_mask = var.static_ip_mask,
+      }
+    )
+  )
+
+  dynamic "networks" {
+    for_each = var.static_ip_network != null ? [1] : []
+    content {
+      name = var.static_ip_network
+      mode = "manual"
+      mac  = local.mac_address[count.index]
+    }
+  }
 
   dynamic "networks" {
     for_each = var.networks

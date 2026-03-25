@@ -6,6 +6,6 @@ variable "controller_count" {
 
 variable "worker_count" {
   description = "Number of worker nodes to create"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }

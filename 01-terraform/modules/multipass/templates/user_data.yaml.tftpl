@@ -40,6 +40,19 @@ write_files:
       # Enabling password authentication
       PasswordAuthentication yes
 
+%{~ if static_ip_network != null }
+  - path: /etc/netplan/10-custom.yaml
+    content: |
+      network:
+        version: 2
+        ethernets:
+          eth1:
+            dhcp4: no
+            match:
+              macaddress: ${static_mac_address}
+            addresses: [${static_ip_address}/${static_mask}]
+%{~ endif }
+
 %{~ if platform=="hyperv" }
   # Hyper-V specific
   - path: /etc/initramfs-tools/modules

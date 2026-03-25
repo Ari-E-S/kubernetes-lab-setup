@@ -1,11 +1,11 @@
-variable "cloud_init_file" {
+variable "cloud_init_tpl" {
   type    = string
   default = null
 }
 
-variable "cloud_init" {
-  type    = string
-  default = null
+variable "cloud_init_vars" {
+  type    = map(any)
+  default = {}
 }
 
 variable "name" {
@@ -56,4 +56,28 @@ variable "networks" {
     mac  = optional(string, null)
   }))
   default = []
+}
+
+variable "static_ip_network" {
+  type        = string
+  default     = null
+  description = "Setup a second network interface with a static MAC address"
+}
+
+variable "static_ip_cidr" {
+  type        = string
+  default     = "10.0.0.0"
+  description = "CIDR for static IP network"
+}
+
+variable "static_ip_mask" {
+  type        = number
+  default     = 20
+  description = "Mask for static IP network"
+}
+
+variable "static_ip_start" {
+  type        = number
+  default     = 10
+  description = "Starting IP address for static IP network"
 }
