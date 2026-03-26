@@ -30,6 +30,8 @@ resource "multipass_instance" "this" {
     )
   )
 
+  primary = (var.first_is_primary && count.index == 0) ? true : false
+
   dynamic "networks" {
     for_each = var.static_ip_network != null ? [1] : []
     content {

@@ -14,6 +14,8 @@ module "k8s_controllers" {
   memory         = "2G"
   disks          = "10G"
 
+  first_is_primary = true
+
   static_ip_network = "Internal Switch"
   static_ip_start   = 10
 }
