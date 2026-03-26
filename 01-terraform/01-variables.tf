@@ -1,3 +1,9 @@
+variable "platform" {
+  description = "Platform to use for instances (e.g. 'hyperv', 'qemu', etc.)"
+  type        = string
+  default     = "hyperv"
+}
+
 variable "controller_count" {
   description = "Number of control plane nodes to create"
   type        = number
