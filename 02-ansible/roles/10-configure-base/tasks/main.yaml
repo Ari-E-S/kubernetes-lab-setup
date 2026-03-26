@@ -142,16 +142,11 @@
     ansible.builtin.file:
       path: /etc/containerd
       state: directory
-    become: true
-    notify: Restart Containerd
 
   - name: save default containerd config to /etc/containerd/config.toml
     ansible.builtin.shell:
       cmd: "containerd config default | tee /etc/containerd/config.toml"
       creates: /etc/containerd/config.toml
-    register: containerd_config
-    become: true
-    notify: Restart Containerd
 
   # set CRI to use SystemdCgroup, which is false by default
   # settings take effect after restart, which is handled later
@@ -161,9 +156,17 @@
       path: /etc/containerd/config.toml
       regexp: 'SystemdCgroup = false'
       replace: 'SystemdCgroup = true'
-    when: containerd_config.changed == True
-    become: true
-    notify: Restart Containerd
+
+  # set CRI to use SystemdCgroup, which is false by default
+  # settings take effect after restart, which is handled later
+  # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
+  - name: edit SystemdCgroup to be true in /etc/containerd/config.toml
+    ansible.builtin.replace:
+      path: /etc/containerd/config.toml
+      regexp: '^(\s*sandbox_image\s*=\s*"registry\.k8s\.io/pause):[\d\.]*"'
+      replace: '\1:3.10.1"'
+  become: true
+  notify: Restart Containerd
 
 - name: Create KubeConfig directory
   ansible.builtin.file:
