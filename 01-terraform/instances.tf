@@ -16,7 +16,9 @@ module "k8s_controllers" {
 
   first_is_primary = true
 
-  static_ip_network = "Internal Switch"
+  static_ip_cidr    = var.static_ip_cidr
+  static_ip_network = var.switch_name
+  static_ip_mask    = var.static_ip_mask
   static_ip_start   = 10
 }
 
@@ -35,6 +37,8 @@ module "k8s_workers" {
   memory         = "2G"
   disks          = "10G"
 
-  static_ip_network = "Internal Switch"
+  static_ip_cidr    = var.static_ip_cidr
+  static_ip_network = var.switch_name
+  static_ip_mask    = var.static_ip_mask
   static_ip_start   = 20
 }
