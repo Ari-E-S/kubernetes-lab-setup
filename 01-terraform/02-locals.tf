@@ -1,9 +1,10 @@
 locals {
   name_prefix = "k8s"
   image_name  = "noble"
-  platform    = "hyperv"
+  platform    = try(var.platform, "unk")
   vm_domains = {
-    hyperv = "mshome.net"
+    hyperv = ".mshome.net"
+    unk    = ""
   }
-  vm_domain = try(local.vm_domains[local.platform], "") != "" ? ".${local.vm_domains[local.platform]}" : ""
+  vm_domain = local.vm_domains[local.platform]
 }

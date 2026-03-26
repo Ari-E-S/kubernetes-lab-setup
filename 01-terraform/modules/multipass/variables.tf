@@ -81,3 +81,9 @@ variable "static_ip_start" {
   default     = 10
   description = "Starting IP address for static IP network"
 }
+
+variable "first_is_primary" {
+  type        = bool
+  default     = false
+  description = "Set the first instance as primary (only set this for one instance in Multipass)"
+}
