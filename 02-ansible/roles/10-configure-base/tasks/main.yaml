@@ -85,13 +85,6 @@
     become_method: sudo
     notify: clean apt
 
-- name: update apt cache
-  ansible.builtin.apt:
-    update_cache: true
-    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
-  become: true
-  become_method: sudo
-
 - name: Install a list of packages
   ansible.builtin.apt:
     pkg:
@@ -109,6 +102,8 @@
     - containerd
     - python-is-python3
     - helm
+    update_cache: yes
+    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
   become: true
   become_method: sudo
 
