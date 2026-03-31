@@ -32,6 +32,7 @@ resource "multipass_instance" "this" {
 
   primary = (var.first_is_primary && count.index == 0) ? true : false
 
+  # https://dev.to/madalinignisca/how-to-permanent-private-ip-on-multipass-on-windows-with-hyper-v-14k6
   dynamic "networks" {
     for_each = var.static_ip_network != null ? [1] : []
     content {
