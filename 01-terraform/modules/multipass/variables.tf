@@ -1,11 +1,19 @@
 variable "cloud_init_tpl" {
-  type    = string
-  default = null
+  description = "Template for cloud-init script."
+  type        = string
+  default     = null
 }
 
 variable "cloud_init_vars" {
-  type    = map(any)
-  default = {}
+  description = "Map of variables to apply to the template"
+  type        = map(any)
+  default     = {}
+}
+
+variable "wait_for_cloud_init" {
+  description = "Wait for cloud-init to finish after launch before marking the resource as created. Useful when downstream resources depend on packages or configuration applied by cloud-init."
+  type        = bool
+  default     = true
 }
 
 variable "name" {
@@ -13,19 +21,23 @@ variable "name" {
 }
 
 variable "image_name" {
-  type = string
+  description = "Name of the image to use for the instance."
+  type        = string
 }
 
 variable "cpus" {
-  type = number
+  description = "Number of CPUs for the instance."
+  type        = number
 }
 
 variable "memory" {
-  type = string
+  description = "Memory for the instance."
+  type        = string
 }
 
 variable "disks" {
-  type = string
+  description = "Disk size for the instance."
+  type        = string
 }
 
 variable "instance_count" {
@@ -41,6 +53,7 @@ variable "name_prefix" {
 }
 
 variable "mounts" {
+  description = "Map describing a mount. Uses SSHFS to mount files/folders into the VMs."
   type = list(object({
     host_path     = string
     instance_path = string
@@ -50,6 +63,7 @@ variable "mounts" {
 }
 
 variable "networks" {
+  description = "Connect the VM to a network."
   type = list(object({
     name = string
     mode = optional(string, "auto")
@@ -59,31 +73,31 @@ variable "networks" {
 }
 
 variable "static_ip_network" {
+  description = "Setup a second network interface with a static MAC address"
   type        = string
   default     = null
-  description = "Setup a second network interface with a static MAC address"
 }
 
 variable "static_ip_cidr" {
+  description = "CIDR for static IP network"
   type        = string
   default     = "10.0.0.0"
-  description = "CIDR for static IP network"
 }
 
 variable "static_ip_mask" {
+  description = "Mask for static IP network"
   type        = number
   default     = 24
-  description = "Mask for static IP network"
 }
 
 variable "static_ip_start" {
+  description = "Starting IP address for static IP network"
   type        = number
   default     = 10
-  description = "Starting IP address for static IP network"
 }
 
 variable "first_is_primary" {
+  description = "Set the first instance as primary (only set this for one instance in Multipass)"
   type        = bool
   default     = false
-  description = "Set the first instance as primary (only set this for one instance in Multipass)"
 }
