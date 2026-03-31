@@ -174,3 +174,14 @@
   ansible.builtin.file:
     path: /home/ubuntu/.kube
     state: directory
+
+- name: Add a host to the hosts file for the control plane endpoint
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 k8s-control"
+    create: true
+  become: true
+  become_method: sudo
+  when:
+    - "'controlplane' in groups"
+    - inventory_hostname in groups['controlplane']
