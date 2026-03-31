@@ -29,6 +29,7 @@ resource "multipass_instance" "this" {
       }
     )
   )
+  wait_for_cloud_init = var.wait_for_cloud_init
 
   primary = (var.first_is_primary && count.index == 0) ? true : false
 
