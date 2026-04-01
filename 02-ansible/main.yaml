@@ -33,7 +33,7 @@
           argv:
             - kubeadm
             - init
-            - -config=/home/ubuntu/kubeadm-config.yaml
+            - --config=/home/ubuntu/kubeadm-config.yaml
             - --upload-certs
           creates: /etc/kubernetes/admin.conf
         become: true
