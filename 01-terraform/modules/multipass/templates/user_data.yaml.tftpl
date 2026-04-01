@@ -14,28 +14,14 @@ users:
 
 
 ssh_deletekeys: false
-packages:
-  - python-is-python3
-  - gnupg
-  - tzdata
-  - net-tools
-  - curl
-  - apt-transport-https
-  - ca-certificates
-  - tmux
-  - vim
-  - wget
-  - nmon
-  - lsb-release
-  - yq
-%{~ if platform=="hyperv" }
-  # Hyper-V specific
-  - linux-virtual
-  - linux-cloud-tools-virtual
-  - linux-tools-virtual
-%{~ endif }
 
 write_files:
+%{~ if apt_cacher_url != null }
+  - path: /etc/apt/apt.conf.d/02proxy
+    content: |
+      Acquire::http { Proxy "${apt_cacher_url}"; };
+
+%{~ endif }
   - path: /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
     content: |
       # Enabling password authentication
@@ -72,6 +58,27 @@ write_files:
       hv_netvsc
 
 %{~ endif }
+packages:
+  - python-is-python3
+  - gnupg
+  - tzdata
+  - net-tools
+  - curl
+  - apt-transport-https
+  - ca-certificates
+  - tmux
+  - vim
+  - wget
+  - nmon
+  - lsb-release
+  - yq
+%{~ if platform=="hyperv" }
+  # Hyper-V specific
+  - linux-virtual
+  - linux-cloud-tools-virtual
+  - linux-tools-virtual
+%{~ endif }
+
 runcmd:
   - systemctl restart ssh.service
   - modprobe br_netfilter # Load br_netfilter module.

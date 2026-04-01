@@ -26,6 +26,7 @@ resource "multipass_instance" "this" {
           count.index + var.static_ip_start
         ),
         static_mask = var.static_ip_mask,
+        apt_cacher_url = var.apt_cacher_url,
       }
     )
   )

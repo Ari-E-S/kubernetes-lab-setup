@@ -101,3 +101,9 @@ variable "first_is_primary" {
   type        = bool
   default     = false
 }
+
+variable "apt_cacher_url" {
+  description = "URL for an APT cacher server to speed up package installation in the instances. This will set the APT proxy configuration in the cloud-init script."
+  type        = string
+  default     = null
+}
