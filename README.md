@@ -11,22 +11,68 @@ Required software in the execution environment:
 * Multipass
 * Ansible
 * Helm
+* WSL
 
 ### OS
 
-This setup has been tested on Windows 11 with Hyper-V virtualization and WSL using NAT networking mode as the execution environment.
-This setup requires that IP forwarding be enabled between the WSL interface and the Ethernet vSwitch used by the VMs (see [Networking in WSL](#Networking in WSL) )
+This setup has been tested on Windows 11 with Hyper-V virtualization and WSL as the execution environment.
+WSL is required as ansible cannot run on Windows.
 
-#### Networking in WSL
+#### Networking
 
+Networking is one of the most involved parts of this setup.
 
-Make sure of the following:
+Some considerations to keep in mind:
+* `kubeadm` uses the default gateway to select the IP address for the node and the services
+* You can can change the binding address for the API server but changing it for the other services is not recommended
+* Kubernetes needs static IPs to work
+* Hyper-V and Multipass set up an interface for management that changes IP on restart
+* The address needs to be routable, so link-local or multicast addresses will not work
 
-Networking mode for WSL is set to `NAT` in `$HOME\.wslconfig`.
-Routing between the virtual Ethernet switches for WSL and the VMs is enabled:
+Before starting, setup Windows and WSL networking by following these instructions.
+
+##### Networking for WSL
+
+1. Open `WSL Settings`
+1. Select the `Networking` tab
+1. Make sure these are the values:
+  * `Networking mode` = `NAT`
+  * `Hyper-V Firewall enabled` = `On`
+  * `Enable localhost forwarding` = `On`
+  * `Host Address Loopback` = `Off`
+  * `Auto Proxy enabled` = `On`
+  * `DNS Proxy enabled` = `On`
+  * `DNS Tunneling enabled` = `On`
+  * `Use best effort DNS parsing` = `Off`
+
+##### Networking for Hyper-V
+
+Open an administrator Powershell console.
+
+Create an `Internal` vSwitch named `multipass`.
+```pwsh
+New-VMSwitch -Name "multipass" -SwitchType Internal
+```
+You may change the name but it must be kept consistent for the reminder of the procedure.
+
+Add an IP address and NAT capabilities to the new switch.
+```pwsh
+New-NetIPAddress -IPAddress 192.168.50.1 -PrefixLength 24 -InterfaceAlias "vEthernet (multipass)"
+New-NetNat -Name multipass -InternalIPInterfaceAddressPrefix 192.168.50.0/24
+```
+A different CIDR can be used but make sure it is a private range from RFC1918 and not used anywhere else in the setup.
+This CIDR will be assigned to the VMs' second network interface and will become the default gateway and the IP addresses for the Kubernetes nodes.
+More in depth info can be found the [Microsoft's docs](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/setup-nat-network)
+
+Disable DHCP on the new switch
+```pwsh
+Set-NetIPInterface -InterfaceAlias "vEthernet (multipass)" -Dhcp Disabled
+```
+
+Enable forwarding on all vSwitches to ensure connectivity between the host, WSL and the VMs across all interfaces.
 ```pwsh
 Get-NetIPInterface | `
-  where {$_.InterfaceAlias -eq 'vEthernet (WSL (Hyper-V firewall))' -or $_.InterfaceAlias -eq 'vEthernet (Default Switch)'} | `
+  where {$_.InterfaceAlias -eq 'vEthernet (WSL (Hyper-V firewall))' -or $_.InterfaceAlias -eq 'vEthernet (Default Switch)' -or $_.InterfaceAlias -eq "vEthernet (multipass)"} | `
   Set-NetIPInterface -Forwarding Enabled
 ```
 
@@ -47,3 +93,16 @@ ansible-galaxy collection install -r 02-ansible/requirements.yaml
 Requires:
 * Multipass
 * Hyper-V
+
+## Creating the stack
+
+### Infrastructure
+
+Once the networking and all the requirements are set, you can create a `terraform.tfvars` file in the `01-terraform` directory based on the provided example.
+The values of the variables within the file must be set according to your environment.
+Once the variables are updated, the usual `terraform init` and `terraform apply` can be used to spin up the VMs.
+
+### Configuration
+
+The terraform run should result in the instances in the up and running state although pending a reboot.
+Ansible will take care of the final configurations prior to setting up the cluster and joining the nodes
