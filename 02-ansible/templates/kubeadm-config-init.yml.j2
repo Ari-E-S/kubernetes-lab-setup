@@ -1,42 +1,12 @@
-{%- set static_ip_address = ansible_facts['eth1'].ipv4.address | default(ansible_facts['eth0'].ipv4.address) %}
 ---
 apiVersion: "kubeadm.k8s.io/v1beta4"
 kind: InitConfiguration
-nodeRegistration:
-    name: {{ inventory_hostname }}
 localAPIEndpoint:
   advertiseAddress: 0.0.0.0
   bindPort: 6443
 ---
 apiVersion: "kubeadm.k8s.io/v1beta4"
 kind: ClusterConfiguration
-controlPlaneEndpoint: "k8s-control"
 networking:
   podSubnet: "10.0.32.0/20"
   serviceSubnet: "10.0.16.0/24"
-apiServer:
-  certSANs:
-    - "*.mshome.net"
-    - k8s-control
-    - k8s-control-1
-    - k8s-control-2
-    - "0.0.0.0"
-etcd:
-  local:
-    serverCertSANs:
-      - "{{ static_ip_address }}"
-      - "{{ inventory_hostname }}"
-      - "k8s-control"
-    peerCertSANs:
-      - "{{ static_ip_address }}"
-      - "{{ inventory_hostname }}"
-      - "k8s-control"
-    extraArgs:
-      - name: initial-cluster-state
-        value: new
-      - name: name
-        value: {{ inventory_hostname }}
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-address: "{{ static_ip_address }}"
