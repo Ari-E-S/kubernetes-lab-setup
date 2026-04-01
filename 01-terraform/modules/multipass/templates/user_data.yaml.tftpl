@@ -37,6 +37,10 @@ write_files:
           eth1:
             dhcp4: no
             addresses: [${static_ip_address}/${static_mask}]
+            routes:
+              - to: default
+                via: ${static_ip_gateway}
+                metric: 50
 %{~ endif }
 
 %{~ if platform=="hyperv" }

@@ -25,6 +25,10 @@ resource "multipass_instance" "this" {
           count.index + var.static_ip_start
         ),
         static_mask = var.static_ip_mask,
+        static_ip_gateway = cidrhost(
+          "${var.static_ip_cidr}/${var.static_ip_mask}",
+          1
+        ),
         apt_cacher_url = var.apt_cacher_url,
       }
     )
