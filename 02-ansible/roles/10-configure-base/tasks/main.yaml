@@ -104,6 +104,7 @@
     - helm
     update_cache: yes
     cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
+  register: install_packages
   become: true
   become_method: sudo
 
@@ -112,6 +113,7 @@
 - name: wait 5 seconds
   ansible.builtin.pause:
     seconds: 5
+  when: install_packages.changed
 
 - name: Hold kubernetes packages at their current version
   ansible.builtin.dpkg_selections:
@@ -172,3 +174,14 @@
   ansible.builtin.file:
     path: /home/ubuntu/.kube
     state: directory
+
+- name: Add a host to the hosts file for the control plane endpoint
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 k8s-control"
+    create: true
+  become: true
+  become_method: sudo
+  when:
+    - "'controlplane' in groups"
+    - inventory_hostname in groups['controlplane']

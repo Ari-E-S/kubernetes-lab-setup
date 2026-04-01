@@ -9,3 +9,6 @@ worker_count = 0
 # switch_name = "Internal Switch" # Create a switch in Hyper-V Manager and use its name here.
 static_ip_cidr = "169.254.0.0"
 static_ip_mask = 24
+
+# Use a cache for APT. Separate VM needs to be provisioned with apt-cacher-ng installed and running.
+# apt_cacher_url = "http://apt-cache:3142"

@@ -33,3 +33,9 @@ variable "static_ip_mask" {
   type        = number
   default     = 24
 }
+
+variable "apt_cacher_url" {
+  description = "URL for an APT cacher server to speed up package installation in the instances. This will set the APT proxy configuration in the cloud-init script."
+  type        = string
+  default     = null
+}

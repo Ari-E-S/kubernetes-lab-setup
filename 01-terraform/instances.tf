@@ -20,6 +20,8 @@ module "k8s_controllers" {
   static_ip_network = var.switch_name
   static_ip_mask    = var.static_ip_mask
   static_ip_start   = 10
+
+  apt_cacher_url = var.apt_cacher_url
 }
 
 module "k8s_workers" {
@@ -41,4 +43,6 @@ module "k8s_workers" {
   static_ip_network = var.switch_name
   static_ip_mask    = var.static_ip_mask
   static_ip_start   = 20
+
+  apt_cacher_url = var.apt_cacher_url
 }

@@ -26,12 +26,15 @@ resource "multipass_instance" "this" {
           count.index + var.static_ip_start
         ),
         static_mask = var.static_ip_mask,
+        apt_cacher_url = var.apt_cacher_url,
       }
     )
   )
+  wait_for_cloud_init = var.wait_for_cloud_init
 
   primary = (var.first_is_primary && count.index == 0) ? true : false
 
+  # https://dev.to/madalinignisca/how-to-permanent-private-ip-on-multipass-on-windows-with-hyper-v-14k6
   dynamic "networks" {
     for_each = var.static_ip_network != null ? [1] : []
     content {

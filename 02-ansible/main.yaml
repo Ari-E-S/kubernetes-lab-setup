@@ -13,12 +13,28 @@
         msg: "The primary control plane node is: {{ groups['controlplane'][0] }}"
       run_once: true
 
+    - name: Use template module to deploy config
+      ansible.builtin.template:
+        src: templates/kubeadm-config-init.yml.j2
+        dest: /home/ubuntu/kubeadm-config.yaml
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+      when:
+        - "'controlplane' in group_names"
+        # - inventory_hostname == groups['controlplane'][0]
+        - inventory_hostname in groups['controlplane']
+
 - hosts: controlplane[0]
   tasks:
     - block:
       - name: initialize kubernetes with the necessary args
-        ansible.builtin.shell:
-          cmd: "kubeadm init --control-plane-endpoint {{ groups['controlplane'][0] }} --upload-certs --pod-network-cidr 10.0.16.0/20 --service-cidr 10.0.15.0/24"
+        ansible.builtin.command:
+          argv:
+            - kubeadm
+            - init
+            - --config=/home/ubuntu/kubeadm-config.yaml
+            - --upload-certs
           creates: /etc/kubernetes/admin.conf
         become: true
         register: k8s_init_output
@@ -74,7 +90,7 @@
   tasks:
     - name: join worker nodes to the cluster
       ansible.builtin.shell:
-        cmd: "{{ join_command }} --certificate-key {{ certificate_key }}"
+        cmd: "{{ join_command }}"
         creates: /etc/kubernetes/pki/ca.crt
       become: true
 
