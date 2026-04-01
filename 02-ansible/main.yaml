@@ -90,7 +90,7 @@
   tasks:
     - name: join worker nodes to the cluster
       ansible.builtin.shell:
-        cmd: "{{ join_command }} --certificate-key {{ certificate_key }}"
+        cmd: "{{ join_command }}"
         creates: /etc/kubernetes/pki/ca.crt
       become: true
 
