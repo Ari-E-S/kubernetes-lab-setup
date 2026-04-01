@@ -36,9 +36,11 @@ write_files:
         ethernets:
           eth1:
             dhcp4: no
-            match:
-              macaddress: ${static_mac_address}
             addresses: [${static_ip_address}/${static_mask}]
+            routes:
+              - to: default
+                via: ${static_ip_gateway}
+                metric: 50
 %{~ endif }
 
 %{~ if platform=="hyperv" }

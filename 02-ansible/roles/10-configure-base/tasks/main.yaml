@@ -177,11 +177,12 @@
 
 - name: Add a host to the hosts file for the control plane endpoint
   ansible.builtin.lineinfile:
-    path: /etc/hosts
+    path: /etc/cloud/templates/hosts.debian.tmpl
     line: "127.0.0.1 k8s-control"
     create: true
   become: true
   become_method: sudo
+  notify: Restart Server
   when:
     - "'controlplane' in groups"
     - inventory_hostname in groups['controlplane']

@@ -20,12 +20,15 @@ resource "multipass_instance" "this" {
       var.cloud_init_vars,
       {
         static_ip_network  = var.static_ip_network,
-        static_mac_address = local.mac_address[count.index],
         static_ip_address = cidrhost(
           "${var.static_ip_cidr}/${var.static_ip_mask}",
           count.index + var.static_ip_start
         ),
         static_mask = var.static_ip_mask,
+        static_ip_gateway = cidrhost(
+          "${var.static_ip_cidr}/${var.static_ip_mask}",
+          1
+        ),
         apt_cacher_url = var.apt_cacher_url,
       }
     )
@@ -40,7 +43,6 @@ resource "multipass_instance" "this" {
     content {
       name = var.static_ip_network
       mode = "manual"
-      mac  = local.mac_address[count.index]
     }
   }
 
