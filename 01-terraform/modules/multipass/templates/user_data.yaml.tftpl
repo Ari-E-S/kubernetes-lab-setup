@@ -84,4 +84,6 @@ packages:
 runcmd:
   - systemctl restart ssh.service
   - modprobe br_netfilter # Load br_netfilter module.
+%{~ if platform=="hyperv" }
   - update-initramfs -u
+%{~ endif }
