@@ -3,8 +3,7 @@ locals {
   image_name  = "noble"
   platform    = try(var.platform, "unk")
   vm_domains = {
-    hyperv = ".mshome.net"
-    unk    = ""
+    hyperv = "mshome.net"
   }
-  vm_domain = local.vm_domains[local.platform]
+  vm_domain = try(local.vm_domains[local.platform], "")
 }

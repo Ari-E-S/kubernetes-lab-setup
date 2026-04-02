@@ -1,7 +1,7 @@
 output "ipv4" {
   value = {
     for instance in multipass_instance.this :
-    instance.id => toset(instance.ipv4)
+    instance.id => element(instance.ipv4, 0)
   }
 }
 

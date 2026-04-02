@@ -100,9 +100,34 @@ Requires:
 
 Once the networking and all the requirements are set, you can create a `terraform.tfvars` file in the `01-terraform` directory based on the provided example.
 The values of the variables within the file must be set according to your environment.
-Once the variables are updated, the usual `terraform init` and `terraform apply` can be used to spin up the VMs.
+Once the variables are updated and changing to the `01-terraform` directory, the usual `terraform init` and `terraform apply` can be used to spin up the VMs.
+
+#### APT Cache (optional)
+
+Before creating the infrastructure, you can spin up a VM to act as APT cache by following these instructions: [How to Create a Local Ubuntu Package Cache with Apt-Cacher-NG](https://www.tecmint.com/apt-cache-server-in-ubuntu/)
+After setting up the cache, setting the variable `apt_cacher_url` to the URL of the service makes the VMs use the cache when updating.
+
+The following command will spin up the VM with the service installed and enabled:
+```sh
+multipass launch --name apt-cacher --disk 15G --timeout 600 --cloud-init user_data-apt_cacher.yaml noble
+```
 
 ### Configuration
 
 The terraform run should result in the instances in the up and running state although pending a reboot.
-Ansible will take care of the final configurations prior to setting up the cluster and joining the nodes
+Ansible will take care of the final configurations prior to setting up the cluster and joining the nodes.
+
+Terraform creates an inventory in `02-ansible/inventory/hosts.yaml` that needs to be checked and, sometimes, tweaked.
+It also creates an SSH private key in `02-ansible/keys/ed25519-key-ubuntu` and publishes the private key in the ubuntu user of the VMs.
+
+Switch to the `02-ansible` directory.
+Make sure the VMs are reachable by using the following command:
+
+```sh
+ansible -i inventory/hosts.yaml -m ping all
+```
+
+If successful, the configuration can be applied by running the following:
+```sh
+ansible-playbook -i inventory/hosts.yaml main.yaml
+```

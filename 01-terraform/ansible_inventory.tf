@@ -2,6 +2,7 @@ resource "local_file" "ansible_inventory" {
   content = templatefile(
     "${path.module}/templates/ansible_inventory.yaml.tftpl",
     {
+      platform    = local.platform,
       workers     = module.k8s_workers.ipv4,
       controllers = module.k8s_controllers.ipv4,
       vm_domain   = local.vm_domain,
