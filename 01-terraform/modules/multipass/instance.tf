@@ -19,7 +19,7 @@ resource "multipass_instance" "this" {
     merge(
       var.cloud_init_vars,
       {
-        static_ip_network  = var.static_ip_network,
+        static_ip_network = var.static_ip_network,
         static_ip_address = cidrhost(
           "${var.static_ip_cidr}/${var.static_ip_mask}",
           count.index + var.static_ip_start
