@@ -49,6 +49,12 @@
           mode: '600'
         become: true
 
+      - name: copy kube config into config dir of local host
+        ansible.builtin.fetch:
+          src: /home/ubuntu/.kube/config
+          dest: ../.kube/config
+          flat: yes
+
       - name: generate join command
         ansible.builtin.shell: "kubeadm token create --print-join-command"
         register: join_command_output
