@@ -120,3 +120,35 @@
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
+
+    - name: Add grafana-community chart repo
+      kubernetes.core.helm_repository:
+        name: grafana-community
+        repo_url: "https://grafana-community.github.io/helm-charts"
+      no_log: true
+
+    - name: Create a secret for Grafana admin password
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: grafana-admin-credentials
+            namespace: monitoring
+          type: Opaque
+          stringData:
+            admin-user: admin
+            ldap-toml: ""
+            admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
+
+    - name: Deploy latest version of Grafana chart inside monitoring namespace with values
+      kubernetes.core.helm:
+        name: grafana
+        chart_ref: grafana-community/grafana
+        release_namespace: monitoring
+        create_namespace: true
+        values:
+          replicas: 2
+          admin:
+            existingSecret: "grafana-admin-credentials"
