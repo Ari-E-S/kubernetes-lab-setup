@@ -88,6 +88,8 @@
 - name: Install a list of packages
   ansible.builtin.apt:
     pkg:
+    - python3-pip
+    - python3-kubernetes
     - apt-transport-https
     - ca-certificates
     - curl
