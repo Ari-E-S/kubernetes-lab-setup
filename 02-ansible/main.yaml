@@ -99,3 +99,24 @@
       kubernetes.core.helm_plugin:
         plugin_path: https://github.com/databus23/helm-diff
         state: present
+
+    - name: Deploy latest version of Cilium chart inside kube-system namespace
+      kubernetes.core.helm:
+        name: cilium
+        chart_ref: oci://quay.io/cilium/charts/cilium
+        release_namespace: kube-system
+        create_namespace: true
+        values:
+          version: 1.19.2
+          hubble:
+            relay:
+              enabled: true
+            tls:
+              auto:
+                enabled: true
+                method: cronJob
+          certgen:
+            tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/master
+                operator: Exists
