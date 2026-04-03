@@ -4,15 +4,10 @@
   roles:
     - "10-configure-base"
 
-- name: Get the name of the primary control plane
-  hosts: all
+- name: Add kubeadm init config to control planes
+  hosts: controlplane
   gather_facts: false
   tasks:
-    - name: Print the primary control plane's name
-      ansible.builtin.debug:
-        msg: "The primary control plane node is: {{ groups['controlplane'][0] }}"
-      run_once: true
-
     - name: Use template module to deploy config
       ansible.builtin.template:
         src: templates/kubeadm-config-init.yml.j2
@@ -20,10 +15,6 @@
         owner: ubuntu
         group: ubuntu
         mode: '0644'
-      when:
-        - "'controlplane' in group_names"
-        # - inventory_hostname == groups['controlplane'][0]
-        - inventory_hostname in groups['controlplane']
 
 - hosts: controlplane[0]
   tasks:
@@ -59,11 +50,13 @@
         ansible.builtin.shell: "kubeadm token create --print-join-command"
         register: join_command_output
         become: true
+        changed_when: false
 
       - name: generate certificate key for use with join_command later
         ansible.builtin.shell: "kubeadm init phase upload-certs --upload-certs"
         register: certificate_key_output
         become: true
+        changed_when: false
 
 - hosts: all
   tasks:
@@ -99,34 +92,3 @@
         cmd: "{{ join_command }}"
         creates: /etc/kubernetes/pki/ca.crt
       become: true
-
-# - hosts: controlplane
-#   tasks:
-#     - name: Print all nodes
-#       ansible.builtin.shell: "kubectl get nodes"
-#       register: cluster_output
-
-#     - name: print cluster_output
-#       ansible.builtin.debug:
-#         var: cluster_output
-
-# - hosts: controlplane
-#   roles:
-#     - "20-configure-addons"
-
-#   tasks:
-#     - name: copy over grafana file
-#       ansible.builtin.copy:
-#         src: ../20-monitoring/10-grafana.yaml
-#         dest: 10-grafana.yaml
-
-#     - name: apply grafana
-#       ansible.builtin.shell: "kubectl apply -f 10-grafana.yaml"
-
-#     - name: copy over prometheus file
-#       ansible.builtin.copy:
-#         src: ../20-monitoring/20-prometheus.yaml
-#         dest: 20-prometheus.yaml
-
-#     - name: apply file
-#       ansible.builtin.shell: "kubectl apply -f 20-prometheus.yaml"
