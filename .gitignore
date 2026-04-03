@@ -106,3 +106,6 @@ $RECYCLE.BIN/
 *.log
 *.out
 *.err
+
+.kube/*
+!.kube/README.md
