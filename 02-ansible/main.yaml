@@ -92,3 +92,10 @@
         cmd: "{{ join_command }}"
         creates: /etc/kubernetes/pki/ca.crt
       become: true
+
+- hosts: controlplane[0]
+  tasks:
+    - name: Install Helm diff plugin
+      kubernetes.core.helm_plugin:
+        plugin_path: https://github.com/databus23/helm-diff
+        state: present
