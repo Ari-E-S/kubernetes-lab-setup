@@ -2,6 +2,14 @@
 # tasks file for setup-node
 # This will install packages and apply various system configs necessary for Kubernetes nodes.
 
+- name: Stop unattended-upgrades service to prevent it from running during our playbook
+  ansible.builtin.systemd_service:
+    name: unattended-upgrades
+    state: stopped
+    enabled: false
+  become: true
+  become_method: sudo
+
 - name: load kernel modules
   ansible.builtin.modprobe:
     name: "{{ item }}"
