@@ -1,6 +1,8 @@
 ---
-- name: clean apt
+- name: Refresh apt cache
   ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
     clean: true
   become: true
   become_method: sudo

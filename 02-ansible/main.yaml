@@ -94,11 +94,25 @@
       become: true
 
 - hosts: controlplane[0]
+  gather_facts: true
   tasks:
     - name: Install Helm diff plugin
       kubernetes.core.helm_plugin:
         plugin_path: https://github.com/databus23/helm-diff
         state: present
+
+    - name: Create default IP pool for Cilium LoadBalancerIPPool
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: "cilium.io/v2"
+          kind: CiliumLoadBalancerIPPool
+          metadata:
+            name: "default-ip-pool"
+          spec:
+            blocks:
+              - start: "192.168.50.128"
+                stop: "192.168.50.250"
 
     - name: Deploy latest version of Cilium chart inside kube-system namespace
       kubernetes.core.helm:
@@ -106,11 +120,31 @@
         chart_ref: oci://quay.io/cilium/charts/cilium
         release_namespace: kube-system
         create_namespace: true
+        wait: true
+        wait_timeout: 15m
         values:
           version: 1.19.2
+          kubeProxyReplacement: true
+          k8sServiceHost: "{{ ansible_facts['eth1']['ipv4']['address'] | default(ansible_facts['eth0']['ipv4']['address']) }}"
+          k8sServicePort: 6443
+          ipam:
+            mode: "kubernetes"
+          ingressController:
+            enabled: true
+            loadbalancerMode: "dedicated"
+            default: true
+          hostNetwork:
+            enabled: true
           hubble:
+            enabled: true
+            ui:
+              enabled: true
+              service:
+                type: LoadBalancer
             relay:
               enabled: true
+              service:
+                type: LoadBalancer
             tls:
               auto:
                 enabled: true
@@ -121,11 +155,52 @@
                 key: node-role.kubernetes.io/master
                 operator: Exists
 
+    - name: Add metrics-server chart repo
+      kubernetes.core.helm_repository:
+        name: metrics-server
+        repo_url: "https://kubernetes-sigs.github.io/metrics-server/"
+
+    - name: Deploy latest version of metrics-server chart inside kube-system namespace
+      kubernetes.core.helm:
+        name: metrics-server
+        chart_ref: metrics-server/metrics-server
+        release_namespace: kube-system
+        wait: true
+        wait_timeout: 15m
+        values:
+          args:
+            - --kubelet-insecure-tls
+
+    - name: Create monitoring namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: monitoring
+
+    - name: Add kube-prometheus-stack chart repo
+      kubernetes.core.helm_repository:
+        name: kube-prometheus-stack
+        repo_url: "https://prometheus-community.github.io/helm-charts"
+
+    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
+      kubernetes.core.helm:
+        name: kube-prometheus-stack
+        chart_ref: kube-prometheus-stack/kube-prometheus-stack
+        release_namespace: monitoring
+        wait: true
+        wait_timeout: 15m
+        values:
+          prometheus-node-exporter:
+            hostRootFsMount:
+              enabled: true
+
     - name: Add grafana-community chart repo
       kubernetes.core.helm_repository:
         name: grafana-community
         repo_url: "https://grafana-community.github.io/helm-charts"
-      no_log: true
 
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
@@ -141,13 +216,13 @@
             admin-user: admin
             ldap-toml: ""
             admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
+      no_log: true
 
     - name: Deploy latest version of Grafana chart inside monitoring namespace with values
       kubernetes.core.helm:
         name: grafana
         chart_ref: grafana-community/grafana
         release_namespace: monitoring
-        create_namespace: true
         values:
           replicas: 2
           admin:
