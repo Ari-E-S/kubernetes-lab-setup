@@ -122,12 +122,23 @@
                 key: node-role.kubernetes.io/master
                 operator: Exists
 
-    - name: Add grafana-community chart repo
+    - name: Add metrics-server chart repo
       kubernetes.core.helm_repository:
-        name: grafana-community
-        repo_url: "https://grafana-community.github.io/helm-charts"
+        name: metrics-server
+        repo_url: "https://kubernetes-sigs.github.io/metrics-server/"
 
-    - name: Create a namespace for Grafana
+    - name: Deploy latest version of metrics-server chart inside kube-system namespace
+      kubernetes.core.helm:
+        name: metrics-server
+        chart_ref: metrics-server/metrics-server
+        release_namespace: kube-system
+        wait: true
+        wait_timeout: 15m
+        values:
+          args:
+            - --kubelet-insecure-tls
+
+    - name: Create monitoring namespace
       kubernetes.core.k8s:
         state: present
         definition:
@@ -135,6 +146,28 @@
           kind: Namespace
           metadata:
             name: monitoring
+
+    - name: Add kube-prometheus-stack chart repo
+      kubernetes.core.helm_repository:
+        name: kube-prometheus-stack
+        repo_url: "https://prometheus-community.github.io/helm-charts"
+
+    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
+      kubernetes.core.helm:
+        name: kube-prometheus-stack
+        chart_ref: kube-prometheus-stack/kube-prometheus-stack
+        release_namespace: monitoring
+        wait: true
+        wait_timeout: 15m
+        values:
+          prometheus-node-exporter:
+            hostRootFsMount:
+              enabled: true
+
+    - name: Add grafana-community chart repo
+      kubernetes.core.helm_repository:
+        name: grafana-community
+        repo_url: "https://grafana-community.github.io/helm-charts"
 
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
