@@ -126,7 +126,6 @@
       kubernetes.core.helm_repository:
         name: grafana-community
         repo_url: "https://grafana-community.github.io/helm-charts"
-      no_log: true
 
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
@@ -142,6 +141,7 @@
             admin-user: admin
             ldap-toml: ""
             admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
+      no_log: true
 
     - name: Deploy latest version of Grafana chart inside monitoring namespace with values
       kubernetes.core.helm:
