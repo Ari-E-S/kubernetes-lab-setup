@@ -54,36 +54,31 @@
       url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
       dest: /etc/apt/keyrings/kubernetes-apt.asc
       mode: "0644"
-    become: true
-    become_method: sudo
-    notify: clean apt
 
   - name: add kubernetes repository
     ansible.builtin.apt_repository:
-      repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+      repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] http://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
       state: present
       update_cache: yes
-    become: true
-    become_method: sudo
-    notify: clean apt
 
-- block:
   - name: add helm repo key
-    ansible.builtin.apt_key:
+    ansible.builtin.get_url:
       url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
-      state: present
-    become: true
-    become_method: sudo
-    notify: clean apt
+      dest: /etc/apt/keyrings/helm-apt.asc
+      mode: "0644"
 
   - name: add helm repository
     ansible.builtin.apt_repository:
-      repo: "deb https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+      repo: "deb [signed-by=/etc/apt/keyrings/helm-apt.asc] http://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
       state: present
       update_cache: yes
-    become: true
-    become_method: sudo
-    notify: clean apt
+
+  become: true
+  become_method: sudo
+  notify: Refresh apt cache
+
+- name: trigger handlers to clean apt and reboot
+  ansible.builtin.meta: flush_handlers
 
 - name: Install a list of packages
   ansible.builtin.apt:
@@ -128,9 +123,6 @@
   become: true
   become_method: sudo
   ignore_errors: true
-
-- name: trigger handlers to clean apt and reboot
-  ansible.builtin.meta: flush_handlers
 
 - name: enable kubelet via systemctl
   ansible.builtin.systemd_service:
