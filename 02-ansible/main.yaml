@@ -127,6 +127,15 @@
         name: grafana-community
         repo_url: "https://grafana-community.github.io/helm-charts"
 
+    - name: Create a namespace for Grafana
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: monitoring
+
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
         state: present
@@ -148,7 +157,6 @@
         name: grafana
         chart_ref: grafana-community/grafana
         release_namespace: monitoring
-        create_namespace: true
         values:
           replicas: 2
           admin:
