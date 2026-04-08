@@ -13,7 +13,7 @@ variable "cloud_init_vars" {
 variable "wait_for_cloud_init" {
   description = "Wait for cloud-init to finish after launch before marking the resource as created. Useful when downstream resources depend on packages or configuration applied by cloud-init."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "name" {
