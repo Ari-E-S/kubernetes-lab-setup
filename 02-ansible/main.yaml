@@ -216,28 +216,6 @@
           metadata:
             name: monitoring
 
-    - name: Add kube-prometheus-stack chart repo
-      kubernetes.core.helm_repository:
-        name: kube-prometheus-stack
-        repo_url: "https://prometheus-community.github.io/helm-charts"
-
-    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
-      kubernetes.core.helm:
-        name: kube-prometheus-stack
-        chart_ref: kube-prometheus-stack/kube-prometheus-stack
-        release_namespace: monitoring
-        wait: true
-        wait_timeout: 15m
-        values:
-          prometheus-node-exporter:
-            hostRootFsMount:
-              enabled: true
-
-    - name: Add grafana-community chart repo
-      kubernetes.core.helm_repository:
-        name: grafana-community
-        repo_url: "https://grafana-community.github.io/helm-charts"
-
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
         state: present
@@ -254,12 +232,22 @@
             admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
       no_log: true
 
-    - name: Deploy latest version of Grafana chart inside monitoring namespace with values
+    - name: Add kube-prometheus-stack chart repo
+      kubernetes.core.helm_repository:
+        name: kube-prometheus-stack
+        repo_url: "https://prometheus-community.github.io/helm-charts"
+
+    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
       kubernetes.core.helm:
-        name: grafana
-        chart_ref: grafana-community/grafana
+        name: kube-prometheus-stack
+        chart_ref: kube-prometheus-stack/kube-prometheus-stack
         release_namespace: monitoring
+        wait: true
+        wait_timeout: 15m
         values:
-          replicas: 2
-          admin:
-            existingSecret: "grafana-admin-credentials"
+          prometheus-node-exporter:
+            hostRootFsMount:
+              enabled: true
+          grafana:
+            admin:
+              existingSecret: "grafana-admin-credentials"
