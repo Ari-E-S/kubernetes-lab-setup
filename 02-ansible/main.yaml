@@ -101,18 +101,41 @@
         plugin_path: https://github.com/databus23/helm-diff
         state: present
 
-    - name: Create default IP pool for Cilium LoadBalancerIPPool
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: "cilium.io/v2"
-          kind: CiliumLoadBalancerIPPool
-          metadata:
-            name: "default-ip-pool"
-          spec:
-            blocks:
-              - start: "192.168.50.128"
-                stop: "192.168.50.250"
+    - name: Check if Cilium CLI exists
+      ansible.builtin.stat:
+        path: /home/ubuntu/.local/bin/cilium
+      register: cilium_cli_status
+
+    - block:
+      - name: Set Cilium CLI architecture
+        ansible.builtin.set_fact:
+          cilium_cli_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+
+      - name: Get latest Cilium CLI version
+        ansible.builtin.uri:
+          url: https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt
+          return_content: true
+        register: cilium_latest_version
+
+      - name: Download Cilium CLI tarball
+        ansible.builtin.get_url:
+          url: "https://github.com/cilium/cilium-cli/releases/download/{{ cilium_latest_version.content | trim }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+          dest: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+          checksum: "sha256:https://github.com/cilium/cilium-cli/releases/download/{{ cilium_latest_version.content | trim }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz.sha256sum"
+          mode: '0644'
+
+      - name: Install Cilium CLI
+        ansible.builtin.unarchive:
+          src: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+          dest: "/home/ubuntu/.local/bin"
+          remote_src: true
+
+      - name: Clean up downloaded files
+        ansible.builtin.file:
+          path: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+          state: absent
+
+      when: not cilium_cli_status.stat.exists
 
     - name: Deploy latest version of Cilium chart inside kube-system namespace
       kubernetes.core.helm:
@@ -155,6 +178,18 @@
                 key: node-role.kubernetes.io/master
                 operator: Exists
 
+    - name: Create default IP pool for Cilium LoadBalancerIPPool
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: "cilium.io/v2"
+          kind: CiliumLoadBalancerIPPool
+          metadata:
+            name: "default-ip-pool"
+          spec:
+            blocks:
+              - cidr: "192.168.60.0/24"
+
     - name: Add metrics-server chart repo
       kubernetes.core.helm_repository:
         name: metrics-server
@@ -180,28 +215,6 @@
           metadata:
             name: monitoring
 
-    - name: Add kube-prometheus-stack chart repo
-      kubernetes.core.helm_repository:
-        name: kube-prometheus-stack
-        repo_url: "https://prometheus-community.github.io/helm-charts"
-
-    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
-      kubernetes.core.helm:
-        name: kube-prometheus-stack
-        chart_ref: kube-prometheus-stack/kube-prometheus-stack
-        release_namespace: monitoring
-        wait: true
-        wait_timeout: 15m
-        values:
-          prometheus-node-exporter:
-            hostRootFsMount:
-              enabled: true
-
-    - name: Add grafana-community chart repo
-      kubernetes.core.helm_repository:
-        name: grafana-community
-        repo_url: "https://grafana-community.github.io/helm-charts"
-
     - name: Create a secret for Grafana admin password
       kubernetes.core.k8s:
         state: present
@@ -218,12 +231,22 @@
             admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
       no_log: true
 
-    - name: Deploy latest version of Grafana chart inside monitoring namespace with values
+    - name: Add kube-prometheus-stack chart repo
+      kubernetes.core.helm_repository:
+        name: kube-prometheus-stack
+        repo_url: "https://prometheus-community.github.io/helm-charts"
+
+    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
       kubernetes.core.helm:
-        name: grafana
-        chart_ref: grafana-community/grafana
+        name: kube-prometheus-stack
+        chart_ref: kube-prometheus-stack/kube-prometheus-stack
         release_namespace: monitoring
+        wait: true
+        wait_timeout: 15m
         values:
-          replicas: 2
-          admin:
-            existingSecret: "grafana-admin-credentials"
+          prometheus-node-exporter:
+            hostRootFsMount:
+              enabled: true
+          grafana:
+            admin:
+              existingSecret: "grafana-admin-credentials"
