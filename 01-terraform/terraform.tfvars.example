@@ -1,6 +1,10 @@
 controller_count = 0
+# controller_cpus = 2
+# controller_memory = "2G"
 
 worker_count = 0
+# worker_cpus = 2
+# worker_memory = "2G"
 
 # Update the following to setup static IPs in the second switch (Hyper-V only).
 # If null, static IPs will not be configured.
