@@ -10,8 +10,8 @@ module "k8s_controllers" {
   image_name     = local.image_name
   name_prefix    = local.name_prefix
   name           = "control"
-  cpus           = 2
-  memory         = "2G"
+  cpus           = var.controller_cpus
+  memory         = var.controller_memory
   disks          = "10G"
 
   first_is_primary = true
@@ -35,8 +35,8 @@ module "k8s_workers" {
   image_name     = local.image_name
   name_prefix    = local.name_prefix
   name           = "worker"
-  cpus           = 2
-  memory         = "2G"
+  cpus           = var.worker_cpus
+  memory         = var.worker_memory
   disks          = "10G"
 
   static_ip_cidr    = var.static_ip_cidr

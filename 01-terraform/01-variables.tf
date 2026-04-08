@@ -16,6 +16,30 @@ variable "worker_count" {
   default     = 0
 }
 
+variable "controller_cpus" {
+  description = "Number of CPUs for each control plane node"
+  type        = number
+  default     = 2
+}
+
+variable "worker_cpus" {
+  description = "Number of CPUs for each worker node"
+  type        = number
+  default     = 2
+}
+
+variable "controller_memory" {
+  description = "Memory for each control plane node"
+  type        = string
+  default     = "2G"
+}
+
+variable "worker_memory" {
+  description = "Memory for each worker node"
+  type        = string
+  default     = "2G"
+}
+
 variable "switch_name" {
   description = "Name of the switch to use for static IPs (Hyper-V only). If null, static IPs will not be configured."
   type        = string
