@@ -1,6 +1,7 @@
 ---
 
-- hosts: all
+- name: Configure base settings on all hosts
+  hosts: all
   roles:
     - "10-configure-base"
 
@@ -16,67 +17,23 @@
         group: ubuntu
         mode: '0644'
 
-- hosts: controlplane[0]
+- name: Initialize first control plane node
+  hosts: controlplane[0]
   tasks:
-    - block:
-      - name: initialize kubernetes with the necessary args
-        ansible.builtin.command:
-          argv:
-            - kubeadm
-            - init
-            - --config=/home/ubuntu/kubeadm-config.yaml
-            - --upload-certs
-          creates: /etc/kubernetes/admin.conf
-        become: true
-        register: k8s_init_output
-
-      - name: copy kube config into ubuntu's home dir subfolder
-        ansible.builtin.copy:
-          remote_src: yes
-          src: /etc/kubernetes/admin.conf
-          dest: /home/ubuntu/.kube/config
-          owner: ubuntu
-          group: ubuntu
-          mode: '600'
-        become: true
-
-      - name: copy kube config into config dir of local host
-        ansible.builtin.fetch:
-          src: /home/ubuntu/.kube/config
-          dest: ../.kube/config
-          flat: yes
-
-      - name: generate join command
-        ansible.builtin.shell: "kubeadm token create --print-join-command"
-        register: join_command_output
-        become: true
-        changed_when: false
-
-      - name: generate certificate key for use with join_command later
-        ansible.builtin.shell: "kubeadm init phase upload-certs --upload-certs"
-        register: certificate_key_output
-        become: true
-        changed_when: false
-
-- hosts: all
-  tasks:
-    - name: save join command for other hosts to access them
-      ansible.builtin.set_fact:
-        join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
-        certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
-
-- hosts: controlplane[1:]
-  serial: 1
-  tasks:
-    - name: setup other control plane nodes
-      ansible.builtin.shell:
-        cmd: "{{ join_command }} --certificate-key {{ certificate_key }} --control-plane"
+    - name: Initialize kubernetes with the necessary args
+      ansible.builtin.command:
+        argv:
+          - kubeadm
+          - init
+          - --config=/home/ubuntu/kubeadm-config.yaml
+          - --upload-certs
         creates: /etc/kubernetes/admin.conf
       become: true
+      register: k8s_init_output
 
-    - name: copy kube config into ubuntu's home dir subfolder
+    - name: Copy kube config into ubuntu's home dir subfolder
       ansible.builtin.copy:
-        remote_src: yes
+        remote_src: true
         src: /etc/kubernetes/admin.conf
         dest: /home/ubuntu/.kube/config
         owner: ubuntu
@@ -84,16 +41,55 @@
         mode: '600'
       become: true
 
-- hosts: workers
+    - name: Copy kube config into config dir of local host
+      ansible.builtin.fetch:
+        src: /home/ubuntu/.kube/config
+        dest: ../.kube/config
+        flat: true
+
+    - name: Generate join command
+      ansible.builtin.command:
+        argv:
+          - kubeadm
+          - token
+          - create
+          - --print-join-command
+      register: join_command_output
+      become: true
+      changed_when: false
+
+    - name: Generate certificate key for use with join_command later
+      ansible.builtin.command:
+        argv:
+          - kubeadm
+          - init
+          - phase
+          - upload-certs
+          - --upload-certs
+      register: certificate_key_output
+      become: true
+      changed_when: false
+
+- name: Save join command and certificate key as facts for other hosts to access
+  hosts: all
+  tasks:
+    - name: Save join command for other hosts to access them
+      ansible.builtin.set_fact:
+        join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
+        certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
+
+- name: Join worker nodes to the cluster
+  hosts: workers
   serial: 1
   tasks:
-    - name: join worker nodes to the cluster
+    - name: Join worker nodes to the cluster
       ansible.builtin.shell:
         cmd: "{{ join_command }}"
         creates: /etc/kubernetes/pki/ca.crt
       become: true
 
-- hosts: controlplane[0]
+- name: Install Cilium CNI and kube-prometheus-stack monitoring
+  hosts: controlplane[0]
   gather_facts: true
   tasks:
     - name: Install Helm diff plugin
@@ -106,36 +102,45 @@
         path: /home/ubuntu/.local/bin/cilium
       register: cilium_cli_status
 
-    - block:
-      - name: Set Cilium CLI architecture
-        ansible.builtin.set_fact:
-          cilium_cli_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
-
-      - name: Get latest Cilium CLI version
-        ansible.builtin.uri:
-          url: https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt
-          return_content: true
-        register: cilium_latest_version
-
-      - name: Download Cilium CLI tarball
-        ansible.builtin.get_url:
-          url: "https://github.com/cilium/cilium-cli/releases/download/{{ cilium_latest_version.content | trim }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-          dest: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-          checksum: "sha256:https://github.com/cilium/cilium-cli/releases/download/{{ cilium_latest_version.content | trim }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz.sha256sum"
-          mode: '0644'
-
-      - name: Install Cilium CLI
-        ansible.builtin.unarchive:
-          src: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-          dest: "/home/ubuntu/.local/bin"
-          remote_src: true
-
-      - name: Clean up downloaded files
-        ansible.builtin.file:
-          path: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-          state: absent
-
+    - name: Install Cilium CLI if not present
       when: not cilium_cli_status.stat.exists
+      block:
+        - name: Create .local/bin directory if it doesn't exist
+          ansible.builtin.file:
+            path: /home/ubuntu/.local/bin
+            state: directory
+            owner: ubuntu
+            group: ubuntu
+            mode: '0755'
+
+        - name: Get latest Cilium CLI version
+          ansible.builtin.uri:
+            url: https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt
+            return_content: true
+          register: cilium_latest_stable_version
+
+        - name: Set Cilium CLI version info
+          ansible.builtin.set_fact:
+            cilium_cli_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+            cilium_cli_ver: "{{ cilium_latest_stable_version.content | trim }}"
+
+        - name: Download Cilium CLI tarball
+          ansible.builtin.get_url:
+            url: "https://github.com/cilium/cilium-cli/releases/download/{{ cilium_cli_ver }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+            dest: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+            checksum: "sha256:https://github.com/cilium/cilium-cli/releases/download/{{ cilium_cli_ver }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz.sha256sum"
+            mode: '0644'
+
+        - name: Install Cilium CLI
+          ansible.builtin.unarchive:
+            src: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+            dest: "/home/ubuntu/.local/bin"
+            remote_src: true
+
+        - name: Clean up downloaded files
+          ansible.builtin.file:
+            path: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+            state: absent
 
     - name: Deploy latest version of Cilium chart inside kube-system namespace
       kubernetes.core.helm:
@@ -215,7 +220,7 @@
           metadata:
             name: monitoring
 
-    - name: Create a secret for Grafana admin password
+    - name: Create a secret for Grafana admin password (UNSAFE!!)
       kubernetes.core.k8s:
         state: present
         definition:
