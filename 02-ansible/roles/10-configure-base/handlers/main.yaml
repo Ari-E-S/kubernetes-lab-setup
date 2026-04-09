@@ -1,20 +1,23 @@
 ---
 - name: Refresh apt cache
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
     clean: true
   become: true
-  become_method: sudo
-  ignore_errors: true
+  become_method: ansible.builtin.sudo
+  failed_when: false
 - name: Restart Server
   ansible.builtin.reboot:
     msg: "Rebooting for package update"
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 - name: Restart Containerd
   ansible.builtin.systemd:
     name: containerd
     state: restarted
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
+- name: Wait 5 seconds
+  ansible.builtin.pause:
+    seconds: 5

@@ -8,10 +8,10 @@
     state: stopped
     enabled: false
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 
-- name: load kernel modules
-  ansible.builtin.modprobe:
+- name: Load kernel modules
+  community.general.modprobe:
     name: "{{ item }}"
     state: present
     persistent: present
@@ -19,7 +19,7 @@
     - overlay
     - br_netfilter
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
   notify: Restart Server
 
 - name: Enable ip forwarding in /proc and in the sysctl file and reload if necessary
@@ -30,7 +30,7 @@
     state: present
     reload: true
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 
 # Let iptables see bridged traffic
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#letting-iptables-see-bridged-traffic
@@ -45,146 +45,132 @@
     - net.bridge.bridge-nf-call-iptables
     - net.bridge.bridge-nf-call-ip6tables
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 
 - name: Disable swap in /etc/fstab
   ansible.builtin.lineinfile:
     path: /etc/fstab
     regexp: "swap.img"
     state: absent
-    backup: yes
+    backup: true
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 
-- block:
-  - name: add kubernetes repo key
-    ansible.builtin.get_url:
-      url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
-      dest: /etc/apt/keyrings/kubernetes-apt.asc
-      mode: "0644"
-
-  - name: add kubernetes repository
-    ansible.builtin.apt_repository:
-      repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] http://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
-      state: present
-      update_cache: yes
-
-  - name: add helm repo key
-    ansible.builtin.get_url:
-      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
-      dest: /etc/apt/keyrings/helm-apt.asc
-      mode: "0644"
-
-  - name: add helm repository
-    ansible.builtin.apt_repository:
-      repo: "deb [signed-by=/etc/apt/keyrings/helm-apt.asc] http://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
-      state: present
-      update_cache: yes
-
+- name: Add kubernetes and helm apt repositories and keys
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
   notify: Refresh apt cache
+  block:
+    - name: Add kubernetes repo key
+      ansible.builtin.get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt.asc
+        mode: "0644"
 
-- name: trigger handlers to clean apt and reboot
+    - name: Add kubernetes repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt.asc] http://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+        state: present
+        update_cache: true
+
+    - name: Add helm repo key
+      ansible.builtin.get_url:
+        url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
+        dest: /etc/apt/keyrings/helm-apt.asc
+        mode: "0644"
+
+    - name: Add helm repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/helm-apt.asc] http://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+        state: present
+        update_cache: true
+
+- name: Trigger handlers to clean apt and reboot
   ansible.builtin.meta: flush_handlers
 
 - name: Install a list of packages
   ansible.builtin.apt:
     pkg:
-    - python3-pip
-    - python3-kubernetes
-    - apt-transport-https
-    - ca-certificates
-    - curl
-    - gpg
-    - tree
-    - containernetworking-plugins
-    - ipset
-    - ipvsadm
-    - kubelet
-    - kubeadm
-    - kubectl
-    - containerd
-    - python-is-python3
-    - helm
-    update_cache: yes
+      - python3-pip
+      - python3-kubernetes
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+      - tree
+      - containernetworking-plugins
+      - ipset
+      - ipvsadm
+      - kubelet
+      - kubeadm
+      - kubectl
+      - containerd
+      - python-is-python3
+      - helm
+    update_cache: true
     cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
-  register: install_packages
   become: true
-  become_method: sudo
-
-# I ran into an issue where Ansible was working too quickly for
-# ansible.builtin.dpkg_selections so let's take a 5-second nap
-- name: wait 5 seconds
-  ansible.builtin.pause:
-    seconds: 5
-  when: install_packages.changed
+  become_method: ansible.builtin.sudo
+  notify: Wait 5 seconds
 
 - name: Hold kubernetes packages at their current version
   ansible.builtin.dpkg_selections:
-    name:  "{{ item }}"
+    name: "{{ item }}"
     selection: hold
   with_items:
     - kubelet
     - kubeadm
     - kubectl
   become: true
-  become_method: sudo
-  ignore_errors: true
+  become_method: ansible.builtin.sudo
+  failed_when: false
 
-- name: enable kubelet via systemctl
+- name: Enable kubelet via systemctl
   ansible.builtin.systemd_service:
     name: kubelet
     enabled: true
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
 
-- block:
-  # these two calls setup the default containerd config file
-  # credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
-  - name: mkdir /etc/containerd
-    ansible.builtin.file:
-      path: /etc/containerd
-      state: directory
-
-  - name: save default containerd config to /etc/containerd/config.toml
-    ansible.builtin.shell:
-      cmd: "containerd config default | tee /etc/containerd/config.toml"
-      creates: /etc/containerd/config.toml
-
-  # set CRI to use SystemdCgroup, which is false by default
-  # settings take effect after restart, which is handled later
-  # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
-  - name: edit SystemdCgroup to be true in /etc/containerd/config.toml
-    ansible.builtin.replace:
-      path: /etc/containerd/config.toml
-      regexp: 'SystemdCgroup = false'
-      replace: 'SystemdCgroup = true'
-
-  # set CRI to use SystemdCgroup, which is false by default
-  # settings take effect after restart, which is handled later
-  # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
-  - name: edit SystemdCgroup to be true in /etc/containerd/config.toml
-    ansible.builtin.replace:
-      path: /etc/containerd/config.toml
-      regexp: '^(\s*sandbox_image\s*=\s*"registry\.k8s\.io/pause):[\d\.]*"'
-      replace: '\1:3.10.1"'
+- name: Configure containerd
   become: true
   notify: Restart Containerd
+  block:
+    # these two calls setup the default containerd config file
+    # credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
+    - name: Create /etc/containerd directory
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        owner: root
+        group: root
+        mode: '755'
+
+    - name: Save default containerd config to /etc/containerd/config.toml
+      ansible.builtin.shell:
+        cmd: "containerd config default > /etc/containerd/config.toml"
+        creates: /etc/containerd/config.toml
+
+    # set CRI to use SystemdCgroup, which is false by default
+    # settings take effect after restart, which is handled later
+    # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
+    - name: Edit SystemdCgroup to be true in Containerd config
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+
+    # set CRI to use compatible pause image, which is registry.k8s.io/pause:3.10.1 as of 2024-06-01
+    - name: Edit sandbox_image to use compatible pause image in Containerd config
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*sandbox_image\s*=\s*"registry\.k8s\.io/pause):[\d\.]*"'
+        replace: '\1:3.10.1"'
 
 - name: Create KubeConfig directory
   ansible.builtin.file:
     path: /home/ubuntu/.kube
     state: directory
-
-- name: Add a host to the hosts file for the control plane endpoint
-  ansible.builtin.lineinfile:
-    path: /etc/cloud/templates/hosts.debian.tmpl
-    line: "127.0.0.1 k8s-control"
-    create: true
-  become: true
-  become_method: sudo
-  notify: Restart Server
-  when:
-    - "'controlplane' in groups"
-    - inventory_hostname in groups['controlplane']
+    owner: ubuntu
+    group: ubuntu
+    mode: '700'
