@@ -124,10 +124,10 @@ Switch to the `02-ansible` directory.
 Make sure the VMs are reachable by using the following command:
 
 ```sh
-ansible -i inventory/hosts.yaml -m ping all
+ansible -m ping all
 ```
 
 If successful, the configuration can be applied by running the following:
 ```sh
-ansible-playbook -i inventory/hosts.yaml main.yaml
+ansible-playbook main.yaml
 ```
