@@ -1,0 +1,29 @@
+---
+
+- name: Install base packages
+  ansible.builtin.apt:
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - gpg
+      - ipset
+      - ipvsadm
+      - lsb-release
+      - net-tools
+      - nmon
+      - python-is-python3
+      - python3-kubernetes
+      - python3-pip
+      - tmux
+      - tree
+      - tzdata
+      - vim
+      - wget
+      - yq
+    update_cache: true
+    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
+  become: true
+  become_method: ansible.builtin.sudo
+  notify: Wait 5 seconds

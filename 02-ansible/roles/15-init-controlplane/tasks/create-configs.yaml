@@ -1,0 +1,39 @@
+---
+- name: Copy kube config into ubuntu's home dir subfolder
+  ansible.builtin.copy:
+    remote_src: true
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    owner: ubuntu
+    group: ubuntu
+    mode: '600'
+  become: true
+
+- name: Copy kube config into config dir of local host
+  ansible.builtin.fetch:
+    src: /home/ubuntu/.kube/config
+    dest: ../.kube/config
+    flat: true
+
+- name: Generate join command
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - token
+      - create
+      - --print-join-command
+  register: join_command_output
+  become: true
+  changed_when: false
+
+- name: Generate certificate key for use with join_command later
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - init
+      - phase
+      - upload-certs
+      - --upload-certs
+  register: certificate_key_output
+  become: true
+  changed_when: false

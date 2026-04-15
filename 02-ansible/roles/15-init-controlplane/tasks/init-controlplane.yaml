@@ -1,0 +1,19 @@
+---
+- name: Use template module to deploy config
+  ansible.builtin.template:
+    src: templates/kubeadm-config-init.yml.j2
+    dest: /home/ubuntu/kubeadm-config.yaml
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Initialize kubernetes with the necessary args
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - init
+      - --config=/home/ubuntu/kubeadm-config.yaml
+      - --upload-certs
+    creates: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_init_output

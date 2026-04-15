@@ -61,24 +61,24 @@ write_files:
 
 %{~ endif }
 packages:
-  - python-is-python3
-  - gnupg
-  - tzdata
-  - net-tools
-  - curl
   - apt-transport-https
   - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - net-tools
+  - nmon
+  - python-is-python3
   - tmux
+  - tzdata
   - vim
   - wget
-  - nmon
-  - lsb-release
   - yq
 %{~ if platform=="hyperv" }
   # Hyper-V specific
-  - linux-virtual
   - linux-cloud-tools-virtual
   - linux-tools-virtual
+  - linux-virtual
 %{~ endif }
 
 runcmd:

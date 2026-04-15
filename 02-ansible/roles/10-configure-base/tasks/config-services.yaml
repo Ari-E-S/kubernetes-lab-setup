@@ -1,0 +1,42 @@
+---
+- name: Enable kubelet via systemctl
+  ansible.builtin.systemd_service:
+    name: kubelet
+    enabled: true
+  become: true
+  become_method: ansible.builtin.sudo
+
+- name: Configure containerd
+  become: true
+  notify: Restart Containerd
+  block:
+    # these two calls setup the default containerd config file
+    # credit to: https://www.itzgeek.com/how-tos/linux/ubuntu-how-tos/install-containerd-on-ubuntu-22-04.html
+    - name: Create /etc/containerd directory
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        owner: root
+        group: root
+        mode: '755'
+
+    - name: Save default containerd config to /etc/containerd/config.toml
+      ansible.builtin.shell:
+        cmd: "containerd config default > /etc/containerd/config.toml"
+        creates: /etc/containerd/config.toml
+
+    # set CRI to use SystemdCgroup, which is false by default
+    # settings take effect after restart, which is handled later
+    # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd
+    - name: Edit SystemdCgroup to be true in Containerd config
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+
+    # set CRI to use compatible pause image, which is registry.k8s.io/pause:3.10.1 as of 2024-06-01
+    - name: Edit sandbox_image to use compatible pause image in Containerd config
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*sandbox_image\s*=\s*"registry\.k8s\.io/pause):[\d\.]*"'
+        replace: '\1:{{ sandbox_image_version }}"'

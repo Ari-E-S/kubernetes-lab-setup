@@ -1,0 +1,70 @@
+---
+
+- name: Add apt repositories and keys for Kubernetes and Helm
+  become: true
+  become_method: ansible.builtin.sudo
+  vars:
+    apt_repos:
+      - name: kubernetes
+        key_url: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_repo_version }}/deb/Release.key"
+        key_dest: "/etc/apt/keyrings/kubernetes-apt-{{ kubernetes_repo_version }}.asc"
+        repo: "http://pkgs.k8s.io/core:/stable:/{{ kubernetes_repo_version }}/deb/ /"
+      - name: helm
+        key_url: "https://packages.buildkite.com/helm-linux/helm-debian/gpgkey"
+        key_dest: "/etc/apt/keyrings/helm-apt.asc"
+        repo: "http://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+  block:
+    - name: Add repo key
+      ansible.builtin.get_url:
+        url: "{{ item.key_url }}"
+        dest: "{{ item.key_dest }}"
+        mode: "0644"
+      loop: "{{ apt_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Add apt repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [signed-by={{ item.key_dest }}]
+          {{ item.repo }}
+        state: present
+      loop: "{{ apt_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+      notify: Refresh apt cache
+
+- name: Trigger handlers to clean apt and reboot
+  ansible.builtin.meta: flush_handlers
+
+- name: Install Kubernetes related packages
+  ansible.builtin.apt:
+    pkg:
+      - containernetworking-plugins
+      - kubelet
+      - kubeadm
+      - kubectl
+      - containerd
+      - helm
+    update_cache: true
+    cache_valid_time: 3600  # Update if cache is older than 1 hour (3600 seconds)
+  become: true
+  become_method: ansible.builtin.sudo
+  notify: Wait 5 seconds
+
+- name: Install Helm diff plugin
+  kubernetes.core.helm_plugin:
+    plugin_path: https://github.com/databus23/helm-diff
+    state: present
+
+- name: Hold kubernetes packages at their current version
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+  become: true
+  become_method: ansible.builtin.sudo
+  failed_when: false

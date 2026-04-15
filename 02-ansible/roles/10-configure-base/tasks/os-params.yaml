@@ -1,0 +1,54 @@
+---
+- name: Stop unattended-upgrades service to prevent it from running during our playbook
+  ansible.builtin.systemd_service:
+    name: unattended-upgrades
+    state: stopped
+    enabled: false
+  become: true
+  become_method: ansible.builtin.sudo
+
+- name: Load kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  with_items:
+    - overlay
+    - br_netfilter
+  become: true
+  become_method: ansible.builtin.sudo
+  notify: Restart Server
+
+- name: Enable ip forwarding in /proc and in the sysctl file and reload if necessary
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  become: true
+  become_method: ansible.builtin.sudo
+
+# Let iptables see bridged traffic
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#letting-iptables-see-bridged-traffic
+- name: Enable netfilter bridging in /proc and in the sysctl file and reload if necessary
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  with_items:
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+  become: true
+  become_method: ansible.builtin.sudo
+
+- name: Disable swap in /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "swap.img"
+    state: absent
+    backup: true
+  become: true
+  become_method: ansible.builtin.sudo

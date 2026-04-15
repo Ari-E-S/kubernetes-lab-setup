@@ -1,0 +1,14 @@
+---
+# tasks file for init-cluster
+# This will:
+#   - initialize the control plane
+#   - install the CNI plugin
+
+- name: Initialize control plane
+  ansible.builtin.import_tasks: init-controlplane.yaml
+
+- name: Create configs
+  ansible.builtin.import_tasks: create-configs.yaml
+
+- name: Deploy CNI plugin
+  ansible.builtin.import_tasks: deploy-cni.yaml
