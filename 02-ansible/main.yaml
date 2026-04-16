@@ -5,10 +5,6 @@
   any_errors_fatal: true
   roles:
     - "10-configure-base"
-  # vars:
-  #   kubernetes_repo_version: "v1.35"
-  #   sandbox_image_version: "3.10.1"
-  #   etcd_version: "v3.6.10"
 
 - name: Initialize the cluster
   hosts: controlplane[0]

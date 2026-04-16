@@ -1,0 +1,4 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the init-controlplane role.
