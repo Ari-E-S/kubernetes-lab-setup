@@ -1,4 +1,12 @@
 ---
+- name: Enable iscsid via systemctl
+  ansible.builtin.systemd_service:
+    name: iscsid
+    enabled: true
+    state: started
+  become: true
+  become_method: ansible.builtin.sudo
+
 - name: Enable kubelet via systemctl
   ansible.builtin.systemd_service:
     name: kubelet

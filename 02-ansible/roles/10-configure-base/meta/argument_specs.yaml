@@ -1,0 +1,13 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the configure-base role.
+    options:
+      kubernetes_repo_version:
+        type: str
+        required: false
+        description: "The version of the Kubernetes repository to use."
+      sandbox_image_version:
+        type: str
+        required: false
+        description: "The version of the sandbox image to use."

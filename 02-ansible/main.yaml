@@ -5,10 +5,6 @@
   any_errors_fatal: true
   roles:
     - "10-configure-base"
-  # vars:
-  #   kubernetes_repo_version: "v1.35"
-  #   sandbox_image_version: "3.10.1"
-  #   etcd_version: "v3.6.10"
 
 - name: Initialize the cluster
   hosts: controlplane[0]
@@ -16,36 +12,14 @@
   roles:
     - "15-init-controlplane"
 
-- name: Join worker nodes to the cluster
-  hosts: workers
-  serial: 1
-  tasks:
-    - name: Save join command for other hosts to access them
-      ansible.builtin.set_fact:
-        join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
-        certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
-
-    - name: Join worker nodes to the cluster
-      ansible.builtin.command:
-        cmd: "{{ join_command }}"
-        creates: /etc/kubernetes/pki/ca.crt
-      become: true
-
-- name: Join worker nodes to the cluster
-  hosts: controlplane[0]
-  tasks:
-    - name: Wait for all nodes to be Ready
-      kubernetes.core.k8s_info:
-        kind: Node
-      register: node_list
-      until: >
-        node_list.resources | length > 0 and
-        node_list.resources | map(attribute='status.conditions') |
-        map('selectattr', 'type', 'equalto', 'Ready') |
-        map('map', attribute='status') | flatten | select('equalto', 'True') |
-        list | length == node_list.resources | length
-      retries: 20
-      delay: 10
+- name: Join nodes to the cluster
+  hosts: all
+  any_errors_fatal: true
+  roles:
+    - "20-join-workers"
+  vars:
+    join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
+    certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
 
 - name: Install metrics-server and kube-prometheus-stack monitoring
   hosts: controlplane[0]
