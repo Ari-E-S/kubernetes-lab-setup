@@ -20,19 +20,15 @@
         cilium_cli_baseuri: "https://github.com/cilium/cilium-cli/releases/download"
 
     - name: Download Cilium CLI tarball
+      delegate_to: localhost
       ansible.builtin.get_url:
         url: "{{ cilium_cli_baseuri }}/{{ cilium_cli_ver }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-        dest: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+        dest: "/tmp/cilium-linux-{{ cilium_cli_ver }}-{{ cilium_cli_arch }}.tar.gz"
         checksum: "sha256:{{ cilium_cli_baseuri }}/{{ cilium_cli_ver }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz.sha256sum"
         mode: '0644'
 
     - name: Install Cilium CLI
       ansible.builtin.unarchive:
-        src: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
+        src: "/tmp/cilium-linux-{{ cilium_cli_ver }}-{{ cilium_cli_arch }}.tar.gz"
         dest: "/home/ubuntu/.local/bin"
-        remote_src: true
-
-    - name: Clean up downloaded files
-      ansible.builtin.file:
-        path: "/tmp/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
-        state: absent
+        remote_src: false
