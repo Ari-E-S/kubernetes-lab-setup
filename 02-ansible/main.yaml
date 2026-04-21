@@ -11,6 +11,8 @@
   any_errors_fatal: true
   roles:
     - "15-init-controlplane"
+  vars:
+    schedulable: true
 
 - name: Join nodes to the cluster
   hosts: all

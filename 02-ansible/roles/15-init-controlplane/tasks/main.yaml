@@ -10,5 +10,14 @@
 - name: Create configs
   ansible.builtin.import_tasks: create-configs.yaml
 
+- name: Untaint controlplane
+  when: schedulable
+  kubernetes.core.k8s_taint:
+    state: absent
+    name: "{{ inventory_hostname }}"
+    taints:
+      - effect: NoSchedule
+        key: "node-role.kubernetes.io/control-plane"
+
 - name: Deploy CNI plugin
   ansible.builtin.import_tasks: deploy-cni.yaml

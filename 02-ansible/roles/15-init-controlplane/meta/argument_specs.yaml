@@ -2,3 +2,8 @@
 argument_specs:
   main:
     short_description: Entry point for the init-controlplane role.
+    options:
+      schedulable:
+        type: bool
+        required: false
+        description: "Remove the NoSchedule taint from the controlplane"
