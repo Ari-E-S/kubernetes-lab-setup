@@ -8,6 +8,8 @@
   when: not cilium_cli_status.stat.exists
   block:
     - name: Get latest Cilium CLI version
+      delegate_to: localhost
+      run_once: true
       ansible.builtin.uri:
         url: https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt
         return_content: true
@@ -21,6 +23,7 @@
 
     - name: Download Cilium CLI tarball
       delegate_to: localhost
+      run_once: true
       ansible.builtin.get_url:
         url: "{{ cilium_cli_baseuri }}/{{ cilium_cli_ver }}/cilium-linux-{{ cilium_cli_arch }}.tar.gz"
         dest: "/tmp/cilium-linux-{{ cilium_cli_ver }}-{{ cilium_cli_arch }}.tar.gz"

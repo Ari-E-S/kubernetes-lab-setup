@@ -8,6 +8,8 @@
   when: not etcd_cli_status.stat.exists
   block:
     - name: Get latest etcd CLI version
+      delegate_to: localhost
+      run_once: true
       ansible.builtin.uri:
         url: https://api.github.com/repos/etcd-io/etcd/releases/latest
         return_content: true
@@ -21,6 +23,7 @@
 
     - name: Get latest etcd CLI
       delegate_to: localhost
+      run_once: true
       ansible.builtin.get_url:
         url: "{{ etcd_cli_baseuri }}/{{ etcd_cli_ver }}/etcd-{{ etcd_cli_ver }}-linux-{{ etcd_cli_arch }}.tar.gz"
         dest: "/tmp/etcd-linux-{{ etcd_cli_ver }}-{{ etcd_cli_arch }}.tar.gz"
