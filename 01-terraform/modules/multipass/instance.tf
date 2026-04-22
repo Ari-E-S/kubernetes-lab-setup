@@ -4,6 +4,17 @@ locals {
     var.cloud_init_tpl :
     "${path.module}/templates/user_data.yaml.tftpl"
   )
+
+  static_ip_addresses = [
+    for i in range(var.instance_count) : cidrhost(
+      "${var.static_ip_cidr}/${var.static_ip_mask}",
+      i + var.static_ip_start
+    )
+  ]
+  static_ip_gateway = cidrhost(
+    "${var.static_ip_cidr}/${var.static_ip_mask}",
+    1
+  )
 }
 
 resource "multipass_instance" "this" {
@@ -20,16 +31,10 @@ resource "multipass_instance" "this" {
       var.cloud_init_vars,
       {
         static_ip_network = var.static_ip_network,
-        static_ip_address = cidrhost(
-          "${var.static_ip_cidr}/${var.static_ip_mask}",
-          count.index + var.static_ip_start
-        ),
-        static_mask = var.static_ip_mask,
-        static_ip_gateway = cidrhost(
-          "${var.static_ip_cidr}/${var.static_ip_mask}",
-          1
-        ),
-        apt_cacher_url = var.apt_cacher_url,
+        static_ip_address = local.static_ip_addresses[count.index],
+        static_mask       = var.static_ip_mask,
+        static_ip_gateway = local.static_ip_gateway
+        apt_cacher_url    = var.apt_cacher_url,
       }
     )
   )
