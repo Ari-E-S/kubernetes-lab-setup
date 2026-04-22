@@ -1,4 +1,5 @@
 output "ipv4" {
+  description = "IP addresses for each instance"
   value = {
     for instance in multipass_instance.this :
     instance.id => element(instance.ipv4, 0)
@@ -6,6 +7,7 @@ output "ipv4" {
 }
 
 output "name" {
+  description = "Array of names of instances"
   value = [
     for instance in multipass_instance.this : instance.id
   ]
