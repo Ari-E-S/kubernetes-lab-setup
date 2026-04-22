@@ -10,3 +10,8 @@ output "name" {
     for instance in multipass_instance.this : instance.id
   ]
 }
+
+output "instances" {
+  description = "Array of the complete instance list"
+  value = multipass_instance.this
+}
