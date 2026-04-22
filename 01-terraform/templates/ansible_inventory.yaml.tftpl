@@ -1,23 +1,27 @@
 ---
 all:
+  hosts:
+%{~ for id,ips in merge(controllers, workers) }
+    ${id}:
+      ansible_host: ${
+        platform == "hyperv" ?
+          join(".", [id, vm_domain]) :
+          ips.public
+      }
+      vars:
+        ip_public: ${ips.public}
+%{~ endfor }
+  vars:
+    nic_external: eth0
+    nic_cluster: ${ platform == "hyperv" ? "eth1" : "eth0" }
   children:
     controlplane:
       hosts:
 %{~ for id,ip in controllers }
         ${id}:
-%{~ if platform == "hyperv" }
-          ansible_host: ${id}.${vm_domain}
-%{~ else }
-          ansible_host: ${ip}
-%{~ endif }
 %{~ endfor }
     workers:
       hosts:
 %{~ for id,ip in workers }
         ${id}:
-%{~ if platform == "hyperv" }
-          ansible_host: ${id}.${vm_domain}
-%{~ else }
-          ansible_host: ${ip}
-%{~ endif }
 %{~ endfor }

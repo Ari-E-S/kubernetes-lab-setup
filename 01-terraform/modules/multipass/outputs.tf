@@ -2,7 +2,9 @@ output "ipv4" {
   description = "IP addresses for each instance"
   value = {
     for instance in multipass_instance.this :
-    instance.id => element(instance.ipv4, 0)
+    instance.id => {
+      public: element(instance.ipv4, 0)
+    }
   }
 }
 
