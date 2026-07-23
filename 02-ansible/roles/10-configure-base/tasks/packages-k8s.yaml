@@ -56,6 +56,7 @@
   kubernetes.core.helm_plugin:
     plugin_path: https://github.com/databus23/helm-diff
     state: present
+    verify: false
 
 - name: Hold kubernetes packages at their current version
   ansible.builtin.dpkg_selections:
