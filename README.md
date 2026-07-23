@@ -109,7 +109,7 @@ After setting up the cache, setting the variable `apt_cacher_url` to the URL of 
 
 The following command will spin up the VM with the service installed and enabled:
 ```sh
-multipass launch --name apt-cacher --disk 15G --timeout 600 --cloud-init user_data-apt_cacher.yaml noble
+multipass launch --name cacher --memory 4G --cpus 2 --disk 15G --timeout 600 --cloud-init user_data-cacher.yaml noble
 ```
 
 ### Configuration
