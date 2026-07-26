@@ -10,7 +10,6 @@
     name: cilium
     chart_ref: oci://quay.io/cilium/charts/cilium
     release_namespace: kube-system
-    create_namespace: true
     wait: true
     wait_timeout: 15m
     values:
