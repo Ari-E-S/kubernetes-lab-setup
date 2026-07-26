@@ -1,5 +1,11 @@
 ---
-- name: Deploy latest version of Cilium chart inside kube-system namespace
+
+- name: Check current cluster node count
+  kubernetes.core.k8s_info:
+    kind: Node
+  register: cluster_nodes
+
+- name: Deploy Cilium chart inside kube-system namespace
   kubernetes.core.helm:
     name: cilium
     chart_ref: oci://quay.io/cilium/charts/cilium
@@ -27,3 +33,6 @@
           - effect: NoSchedule
             key: node-role.kubernetes.io/master
             operator: Exists
+      operator:
+        # Scale down to 1 on single node clusters or 2 otherwise
+        replicas: "{{ (cluster_nodes.resources | length > 1) | ternary(2, 1) | int }}"

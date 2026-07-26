@@ -24,3 +24,6 @@
     list | length == node_list.resources | length
   retries: 20
   delay: 10
+
+- name: Adjust CNI plugin
+  ansible.builtin.import_tasks: adjust-cni.yaml

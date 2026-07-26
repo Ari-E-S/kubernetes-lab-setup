@@ -1,0 +1,36 @@
+---
+
+- name: Add Helm ownership metadata to existing cilium-ca secret
+  delegate_to: "{{ groups['controlplane'][0] }}"
+  run_once: true
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ item }}"
+        namespace: kube-system
+        labels:
+          app.kubernetes.io/managed-by: Helm
+        annotations:
+          meta.helm.sh/release-name: cilium
+          meta.helm.sh/release-namespace: kube-system
+    state: patched
+  with_items:
+    - cilium-ca
+    - hubble-server-certs
+
+- name: Restore default replica count for Cilium operator
+  delegate_to: "{{ groups['controlplane'][0] }}"
+  run_once: true
+  kubernetes.core.helm:
+    name: cilium
+    chart_ref: oci://quay.io/cilium/charts/cilium
+    release_namespace: kube-system
+    wait: true
+    wait_timeout: 15m
+    reuse_values: true
+    reset_values: false
+    skip_crds: true
+    set_values:
+      - value: operator.replicas=2
