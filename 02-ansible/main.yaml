@@ -23,67 +23,10 @@
     join_command: "{{ hostvars[groups['controlplane'][0]]['join_command_output'].stdout }}"
     certificate_key: "{{ hostvars[groups['controlplane'][0]]['certificate_key_output'].stdout_lines[-1] }}"
 
-- name: Install metrics-server and kube-prometheus-stack monitoring
+- name: Install monitoring tools
   hosts: controlplane[0]
   gather_facts: true
-  tasks:
-    - name: Add metrics-server chart repo
-      kubernetes.core.helm_repository:
-        name: metrics-server
-        repo_url: "https://kubernetes-sigs.github.io/metrics-server/"
-
-    - name: Deploy latest version of metrics-server chart inside kube-system namespace
-      kubernetes.core.helm:
-        name: metrics-server
-        chart_ref: metrics-server/metrics-server
-        release_namespace: kube-system
-        wait: true
-        wait_timeout: 15m
-        values:
-          args:
-            - --kubelet-insecure-tls
-
-    - name: Create monitoring namespace
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: monitoring
-
-    - name: Create a secret for Grafana admin password (UNSAFE!!)
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: grafana-admin-credentials
-            namespace: monitoring
-          type: Opaque
-          stringData:
-            admin-user: admin
-            ldap-toml: ""
-            admin-password: "{{ lookup('ansible.builtin.password', '/dev/null seed=' + inventory_hostname) }}"
-      no_log: true
-
-    - name: Add kube-prometheus-stack chart repo
-      kubernetes.core.helm_repository:
-        name: kube-prometheus-stack
-        repo_url: "https://prometheus-community.github.io/helm-charts"
-
-    - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
-      kubernetes.core.helm:
-        name: kube-prometheus-stack
-        chart_ref: kube-prometheus-stack/kube-prometheus-stack
-        release_namespace: monitoring
-        wait: true
-        wait_timeout: 15m
-        values:
-          prometheus-node-exporter:
-            hostRootFsMount:
-              enabled: true
-          grafana:
-            admin:
-              existingSecret: "grafana-admin-credentials"
+  roles:
+    - "25-monitoring"
+  vars:
+    monitor_stack_state: absent

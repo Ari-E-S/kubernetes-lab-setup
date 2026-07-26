@@ -1,0 +1,9 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the monitoring role.
+    options:
+      monitor_stack_state:
+        type: str
+        required: false
+        description: "State of the monitoring deployments."
