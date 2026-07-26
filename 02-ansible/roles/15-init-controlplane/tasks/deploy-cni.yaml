@@ -13,7 +13,6 @@
     wait: true
     wait_timeout: 15m
     values:
-      version: 1.19.2
       kubeProxyReplacement: true
       k8sServiceHost: "{{ ansible_facts['eth1']['ipv4']['address'] | default(ansible_facts['eth0']['ipv4']['address']) }}"
       k8sServicePort: 6443
