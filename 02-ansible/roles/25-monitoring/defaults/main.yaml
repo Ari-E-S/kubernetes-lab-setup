@@ -1,2 +1,3 @@
 ---
-monitor_stack_state: present
+deploy_monitoring_stack: true
+deploy_prometheus: false
