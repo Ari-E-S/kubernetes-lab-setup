@@ -31,3 +31,11 @@
   vars:
     deploy_monitoring_stack: true
     deploy_prometheus: false
+
+- name: Install GitOps tools
+  hosts: controlplane[0]
+  gather_facts: true
+  roles:
+    - "30-gitops"
+  vars:
+    deploy_gitops_stack: true

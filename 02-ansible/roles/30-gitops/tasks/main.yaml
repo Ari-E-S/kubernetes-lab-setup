@@ -1,0 +1,17 @@
+---
+
+- name: Add Argo charts repo
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: "https://argoproj.github.io/argo-helm"
+
+- name: Deploy ArgoCD chart inside argocd namespace
+  kubernetes.core.helm:
+    name: argo-cd
+    state: "{{ (deploy_gitops_stack) | ternary('present', 'absent') }}"
+    chart_ref: argo/argo-cd
+    release_namespace: argocd
+    create_namespace: true
+    wait: true
+    wait_timeout: 15m
+    # values:
