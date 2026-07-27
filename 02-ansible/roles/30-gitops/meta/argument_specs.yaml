@@ -1,0 +1,9 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the gitops role.
+    options:
+      deploy_gitops_stack:
+        type: bool
+        required: false
+        description: "State of the gitops deployments."
