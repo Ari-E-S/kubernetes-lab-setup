@@ -29,4 +29,5 @@
   roles:
     - "25-monitoring"
   vars:
-    monitor_stack_state: absent
+    deploy_monitoring_stack: true
+    deploy_prometheus: false

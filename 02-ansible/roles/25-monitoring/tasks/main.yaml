@@ -22,7 +22,7 @@
 - name: Deploy latest version of metrics-server chart inside kube-system namespace
   kubernetes.core.helm:
     name: metrics-server
-    state: "{{ monitor_stack_state }}"
+    state: "{{ (deploy_monitoring_stack) | ternary('present', 'absent') }}"
     chart_ref: metrics-server/metrics-server
     release_namespace: kube-system
     wait: true
@@ -33,7 +33,7 @@
 
 - name: Create a secret for Grafana admin password (UNSAFE!!)
   kubernetes.core.k8s:
-    state: "{{ monitor_stack_state }}"
+    state: "{{ (deploy_monitoring_stack and deploy_prometheus) | ternary('present', 'absent') }}"
     definition:
       apiVersion: v1
       kind: Secret
@@ -50,7 +50,7 @@
 - name: Deploy latest version of kube-prometheus-stack chart inside monitoring namespace with values
   kubernetes.core.helm:
     name: kube-prometheus-stack
-    state: "{{ monitor_stack_state }}"
+    state: "{{ (deploy_monitoring_stack and deploy_prometheus) | ternary('present', 'absent') }}"
     chart_ref: kube-prometheus-stack/kube-prometheus-stack
     release_namespace: monitoring
     wait: true
